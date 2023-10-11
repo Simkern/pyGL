@@ -84,7 +84,7 @@ def CN_L_advance(q,L,dt):
 
     return CN_Lf_advance(q,L,Z,Z,dt)
 
-def CN_NL_adj_advance(psi,LH,qa,qb,dt):
+def CN_NLf_adj_advance(psi,LH,qa,qb,dt):
     
     I = sp.eye(LH.shape[0])
     
@@ -97,7 +97,7 @@ def CN_NL_adj_advance(psi,LH,qa,qb,dt):
 
     return sp.linalg.spsolve(a,b)
 
-def CN_L_adj_advance(psi,LH,qa,qb,dt):
+def CN_Lf_adj_advance(psi,LH,qa,qb,dt):
     
     I = sp.eye(LH.shape[0])
     
@@ -109,6 +109,12 @@ def CN_L_adj_advance(psi,LH,qa,qb,dt):
     
     # forcing is always explicit
     b = A @ psi + 0.5*dt*(qa+qb)
+
+def CN_L_adj_advance(psi,LH,dt):
+
+    Z = 0.0*psi
+    
+    CN_Lf_adj_advance(psi,LH,Z,Z,dt)
 
     return sp.linalg.spsolve(a,b)
 
