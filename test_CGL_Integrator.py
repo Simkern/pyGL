@@ -89,7 +89,7 @@ print(f'Energy at T = {T:.2f}: E(T) = {ET:.2f}')
 start = time.time()
 psiT = qT/np.sqrt(ET)
 print(f'Adjoint ... ',end='')
-psi = CN_L_adj_integrate(xvec, tvec, mu, nu, gamma, psiT, q)
+psi = CN_L_adj_integrate(xvec, tvec, mu, nu, gamma, psiT)
 etime = time.time() - start
 print(f'done:  {etime:.2f}s')
    

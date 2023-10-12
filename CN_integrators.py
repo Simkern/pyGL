@@ -29,9 +29,10 @@ def CN_L_integrate(xvec,tvec,mu,nu,gamma,q0):
         
     return q
 
-def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT,q):
+def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT):
     
-    (Nx,Nt) = q.shape
+    Nt = len(tvec)
+    Nx = len(xvec)
     dt = np.diff(tvec)[0]
     
     __,DM1b,DM2c = FDmat(xvec)
@@ -46,7 +47,7 @@ def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT,q):
     psi[:,-1] = psiT
     
     for it in reversed(range(Nt-1)):
-        psi[:,it] = CN_L_adj_advance(psi[:,it+1],LH,q[:,it],q[:,it+1],dt)
+        psi[:,it] = CN_L_adj_advance(psi[:,it+1],LH,dt)
         
     return psi
 
@@ -109,12 +110,15 @@ def CN_Lf_adj_advance(psi,LH,qa,qb,dt):
     
     # forcing is always explicit
     b = A @ psi + 0.5*dt*(qa+qb)
+    
+    return sp.linalg.spsolve(a,b)
 
 def CN_L_adj_advance(psi,LH,dt):
 
     Z = 0.0*psi
     
-    CN_Lf_adj_advance(psi,LH,Z,Z,dt)
+    return CN_Lf_adj_advance(psi,LH,Z,Z,dt)
 
-    return sp.linalg.spsolve(a,b)
+    
+
 
