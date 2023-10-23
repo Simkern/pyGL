@@ -1,7 +1,7 @@
 import scipy.sparse as sp
 import numpy as np
 
-from git.diff_mat import FDmat
+from diff_mat import FDmat
 
 ## Crank-Nicolson
 # a = I - 0.5*dt*L

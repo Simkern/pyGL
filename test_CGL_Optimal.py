@@ -6,8 +6,8 @@ from scipy import optimize as Opt
 from scipy import sparse as sp
 import sys
 
-from git.CGL_parameters import *
-from git.CN_integrators import *
+from CGL_parameters import *
+from CN_integrators import *
 from matplotlib import pyplot as plt
 
 plt.close("all")

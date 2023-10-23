@@ -1,8 +1,8 @@
 import numpy as np
 from scipy import linalg as LA
 
-from git.CGL_parameters import *
-from git.diff_mat import *
+from CGL_parameters import *
+from diff_mat import *
 from matplotlib import pyplot as plt
 
 # Parameters

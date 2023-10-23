@@ -6,10 +6,10 @@ from scipy import optimize as Opt
 from scipy import sparse as sp
 import sys
 
-from git.CGL_parameters import *
-from git.CN_integrators import *
-from git.diff_mat import *
-from git.utils import enorm
+from CGL_parameters import *
+from CN_integrators import *
+from diff_mat import *
+from utils import enorm
 from matplotlib import pyplot as plt
 
 plt.close('all')
@@ -19,7 +19,7 @@ x0 = -30                      # beginning of spatial domain
 x1 = 30                       # end of spatial domain
 dx = 0.1                      # Spatial discretisation
 dt = 0.01                       # Time step
-T  = 2                       # Optimisation time
+T  = 1                       # Optimisation time
 Niter = 10
 
 # Discretisation grids
@@ -111,7 +111,6 @@ plt.plot(xvec,np.real(OIC),color='k',linestyle='--',label='OIC = q(0)')
 plt.plot(xvec,np.real(OOC),color='r',linestyle='--',label='OOC')
 plt.legend()
 plt.title(f'Direct-Adjoint loop T = {T:.2f}')
-plt.show()
 
 print(f'Power iteration to compute optimal growth for Topt = {T:.2f} starting from noise.')
 ## Test adjoint loop using noise
@@ -142,3 +141,15 @@ if res > 1e-12:
     print(f'Maximum number of power iteration steps reached. Relative error = {res:.4e}')
 else:
     print(f'Power iteration converged after {n+1} steps.')
+
+fig = plt.figure(3)
+plt.plot(xvec,np.real(q0),color='r',label='Opt (subspace)')
+for theta in np.linspace(0,2*np.pi,20):
+    eitheta = np.exp(1j*theta)
+    plt.plot(xvec,np.real(eitheta*q0),color='r',label='_no_legend_',alpha = 0.2)
+plt.plot(xvec,np.real(noise),color='k',linestyle='-',label='IC', alpha=0.2)
+plt.plot(xvec,np.real(OIC),color='k',linestyle=':',label='OIC')
+plt.plot(xvec,np.real(OOC),color='k',linestyle='--',label='OOC')
+plt.legend()
+plt.title(f'Direct-Adjoint loop T = {T:.2f}')
+plt.show()
