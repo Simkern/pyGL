@@ -1,12 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 12 10:40:10 2023
-
-@author: skern
-"""
 import numpy as np
 
-def enorm(a):
+def enormab(a,b):
+    """
+    Compute the (energy) inner product of two (complex) state vectors a and b
     
-    return np.real(np.dot(a.conj(),a))
+    <a,b> = b^H a
+    
+    """
+    return np.dot(b.conj(),a)
+
+
+def enorm(a):
+    """
+    Compute the (energy) inner product of a (complex) state vector a
+    
+    <a,a> = a^H a
+    
+    """
+    return np.real(enormab(a,a))
+
+def en(a):
+    """
+    Compute vector norm from energy inner product
+    """
+    return np.sqrt(enorm(a))

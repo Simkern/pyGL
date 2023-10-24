@@ -22,14 +22,14 @@ def FDmat(x):
 def DM1(Nx):
     D1f = sp.diags([-3, 4, -1],[0, 1, 2], shape = (Nx,Nx))
     #D1f = sp.diags([-1, 1],[0, 1], shape = (Nx,Nx))
-    D1f = sp.lil_matrix(D1f)
+    #D1f = sp.lil_matrix(D1f)
     D1b = sp.diags([1, -4, 3],[-2, -1, 0], shape = (Nx,Nx))
     #D1b = sp.diags([-1, 1],[-1, 0], shape = (Nx,Nx))
-    D1b = sp.lil_matrix(D1b)
+    #D1b = sp.lil_matrix(D1b)
     return D1f,D1b
 
 # second derivative (second order)
 def DM2(Nx):
     D2c = sp.diags([1, -2, 1],[-1, 0, 1], shape = (Nx,Nx))
-    D2c = sp.lil_matrix(D2c)
+    #D2c = sp.lil_matrix(D2c)
     return D2c
