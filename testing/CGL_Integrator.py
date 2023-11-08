@@ -3,15 +3,15 @@ import time
 import sys
 
 from scipy import linalg as LA
-from scipy import optimize as Opt
-
-sys.path.append('../core')
-
-from CGL_parameters import CGL, CGL2
-from CN_integrators import CN_L_integrate, CN_L_adj_integrate
-from diff_mat import FDmat
-from utils import enorm
 from matplotlib import pyplot as plt
+
+sys.path.append('..')
+
+from core.CGL_parameters import CGL, CGL2
+from core.diff_mat import FDmat
+from core.utils import enorm
+
+from solvers.CN_integrators import CN_L_integrate, CN_L_adj_integrate
 
 plt.close('all')
 
@@ -103,10 +103,10 @@ E2 = enorm(psi0)
 q[:,0] = psi0/np.sqrt(E2)
 print(f'Energy at T =  0.00: E(0) = {E2:.2f}\n')
     
-Opt = q[:,0]
+Optimal = q[:,0]
 
 fig = plt.figure(2)
-plt.plot(xvec,np.real(Opt),color='r',label='q(0)_loop')
+plt.plot(xvec,np.real(Optimal),color='r',label='q(0)_loop')
 plt.plot(xvec,np.real(psi[:,-1]),color='b',label='q(T)')
 plt.plot(xvec,np.real(OIC),color='k',linestyle='--',label='OIC = q(0)')
 plt.plot(xvec,np.real(OOC),color='r',linestyle='--',label='OOC')

@@ -2,12 +2,12 @@ import numpy as np
 import sys
 
 from scipy import linalg as LA
-
-sys.path.append('../core')
-
-from CGL_parameters import CGL, CGL2
-from diff_mat import FDmat
 from matplotlib import pyplot as plt
+
+sys.path.append('..')
+
+from core.CGL_parameters import CGL, CGL2
+from core.diff_mat import FDmat
 
 # Parameters
 x0 = -30                       # beginning of spatial domain

@@ -4,12 +4,12 @@ import sys
 
 from scipy import linalg as LA
 from scipy import optimize as Opt
-
-sys.path.append('../core')
-
-from CGL_parameters import CGL, CGL2
-from diff_mat import FDmat
 from matplotlib import pyplot as plt
+
+sys.path.append('..')
+
+from core.CGL_parameters import CGL, CGL2
+from core.diff_mat import FDmat
 
 plt.close("all")
 
