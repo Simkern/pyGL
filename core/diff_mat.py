@@ -6,7 +6,7 @@ def FDmat(x):
     dx = x[2]-x[1]
     
     assert np.max(np.diff(x)) - np.min(np.diff(x)) < 1e-12, \
-        f'Grid is not equidistant. Do not use this FD method.'
+        'Grid is not equidistant. Do not use this FD method.'
 
     # stencils
     D1f,D1b = DM1(Nx)

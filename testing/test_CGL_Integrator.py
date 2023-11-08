@@ -1,14 +1,15 @@
 import numpy as np
 import time
+import sys
 
 from scipy import linalg as LA
 from scipy import optimize as Opt
-from scipy import sparse as sp
-import sys
 
-from CGL_parameters import *
-from CN_integrators import *
-from diff_mat import *
+sys.path.append('../core')
+
+from CGL_parameters import CGL, CGL2
+from CN_integrators import CN_L_integrate, CN_L_adj_integrate
+from diff_mat import FDmat
 from utils import enorm
 from matplotlib import pyplot as plt
 
@@ -82,7 +83,7 @@ E0 = enorm(OIC)
 print(f'Initial energy:      E(0) = {E0:.2f}')
 q0 = OIC/E0
 
-print(f'Direct ... ',end='')
+print('Direct ... ',end='')
 start = time.time()
 q = CN_L_integrate(xvec, tvec, mu, nu, gamma, q0)
 etime = time.time() - start
@@ -92,7 +93,7 @@ ET = enorm(qT)
 print(f'Energy at T = {T:.2f}: E(T) = {ET:.2f}')
 start = time.time()
 psiT = qT/np.sqrt(ET)
-print(f'Adjoint ... ',end='')
+print('Adjoint ... ',end='')
 psi = CN_L_adj_integrate(xvec, tvec, mu, nu, gamma, psiT)
 etime = time.time() - start
 print(f'done:  {etime:.2f}s')
@@ -120,13 +121,13 @@ noise = noise/np.sqrt(enorm(noise))
 q0 = noise
 
 for n in range(Niter):
-    print(f'Direct ... ', end='')
+    print('Direct ... ', end='')
     start = time.time()
     q = CN_L_integrate(xvec,tvec,mu,nu,gamma,q0)
     qT = q[:,-1]
     G = enorm(qT)
     psiT = qT/np.sqrt(G)
-    print(f'Adjoint ... ',end='')
+    print('Adjoint ... ',end='')
     psi = CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT)
     etime = time.time() - start
     psi0 = psi[:,0]

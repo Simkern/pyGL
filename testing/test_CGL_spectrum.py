@@ -1,8 +1,12 @@
 import numpy as np
+import sys
+
 from scipy import linalg as LA
 
-from CGL_parameters import *
-from diff_mat import *
+sys.path.append('../core')
+
+from CGL_parameters import CGL, CGL2
+from diff_mat import FDmat
 from matplotlib import pyplot as plt
 
 # Parameters
@@ -27,6 +31,7 @@ cd  = -1
 mu0 = 0.38
 mu2 = -0.01
 
+mu_scal,__,__,__,__ = CGL(mu0,cu,cd,U)
 mu,nu,gamma,Umax,mu_t = CGL2(x,mu0,cu,cd,U,mu2,True)
 
 h = np.sqrt(-2*mu2*gamma)

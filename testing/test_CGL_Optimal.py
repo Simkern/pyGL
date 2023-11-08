@@ -1,13 +1,14 @@
 import numpy as np
 import time
+import sys
 
 from scipy import linalg as LA
 from scipy import optimize as Opt
-from scipy import sparse as sp
-import sys
 
-from CGL_parameters import *
-from CN_integrators import *
+sys.path.append('../core')
+
+from CGL_parameters import CGL, CGL2
+from diff_mat import FDmat
 from matplotlib import pyplot as plt
 
 plt.close("all")
@@ -107,13 +108,13 @@ global_OIC = Vh[0,:].conj().T
 global_OOC = U[:,0]
 sigma_max = S[0]**2
 
-print(f'Maximum energy amplification:')
+print('Maximum energy amplification:')
 print(f'  T = {global_max.x:.2f}')
 print(f'  Gt = {sigma_max:.2f}\n')
 print(f'Energy amplification at T = {T:.2f}')
 print(f'  Gt = {GFst:.2f}\n')
 
-print(f'Comparative cost of the computation of the exponential propagator and svd:')
+print('Comparative cost of the computation of the exponential propagator and svd:')
 print(f'  Full operator               ({Nx:>3}x{Nx:>3}): {etime1:.4f} s    ',end='')
 print(f's**2 = {Gt:.2f}')
 print(f'  Eigenv. expansion           ({Nx:>3}x{Nx:>3}): {etime2:.4f} s    ',end='')
