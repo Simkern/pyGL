@@ -39,7 +39,7 @@ def arn(A, b, n):
             # compute projection
             H[i,k] = np.dot(Q[:,i].conj() , v)
             # project out direction
-            v = v - H[i,k] * Q[:,i]
+            v += - H[i,k] * Q[:,i]
         # normalize
         beta = en(v)
         H[k+1, k] = beta
@@ -86,7 +86,7 @@ def arn_inv(A, b, n):
             # compute projection
             H[i,k] = np.dot(Q[:,i].conj() , v)
             # project out direction
-            v = v - H[i,k] * Q[:,i]
+            v += - H[i,k] * Q[:,i]
         # normalize
         beta = en(v)
         H[k+1, k] = beta
@@ -120,7 +120,7 @@ def MGS(Q,w,k):
     for i in range(k):
         proj[i] = np.dot(Q[:,i].conj() , w)
         # project out direction
-        z = z - proj[i] * Q[:,i]
+        z += - proj[i] * Q[:,i]
     # normalize
     beta = en(z)
     return proj,beta,z

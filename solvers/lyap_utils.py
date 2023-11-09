@@ -1,4 +1,5 @@
 import numpy as np
+import math as m
 import sys
 
 from scipy import linalg
@@ -43,6 +44,7 @@ def check_shifts(p_v):
     return p_v, status, is_real
                
 def updateQR(W,Q,R):
+    eps = 1e-20
     # Update and extend QR factorisation by adding the columns of W
     ncolQ = Q.shape[1]
     ncolW = W.shape[1]
@@ -53,40 +55,59 @@ def updateQR(W,Q,R):
         for iq in range(ncolQ):      # Q grows at every outer iteration 
             qcol     = Q[:,iq]
             proj[iq] = np.dot(qcol , wcol)
-            wcol     = wcol - proj[iq] * qcol
+            wcol    += - proj[iq] * qcol
         beta = en(wcol)
         if beta < 1e-8:              # 2nd pass fixes orthonormality in edge cases
             proj2 = np.zeros((ncolQ,1))
             for iq in range(ncolQ):
-                qcol     = Q[:,iq]
+                qcol      = Q[:,iq]
                 proj2[iq] = np.dot(qcol , wcol)
-                wcol     = wcol - proj2[iq] * qcol
-            proj = proj + proj2
-            beta = en(wcol)
+                wcol     += - proj2[iq] * qcol
+            proj += proj2
+            beta  = en(wcol)
         # add column to basis and inflate R
-        Q = np.column_stack([ Q, wcol/beta ])
-        R = np.block([[ R , proj ] , [ np.zeros((1,ncolQ)) , beta ]])
-        ncolQ = ncolQ + 1
-    return Q, R
+        if beta < eps:
+            print('Breakdown: Newest iterate is linearly dependent!')
+            status = -1
+            break
+        elif m.isinf(beta):
+            print('Breakdown: beta = Inf')
+            status = -2
+            break
+        elif m.isnan(beta):
+            print('Breakdown: beta = NaN')
+            status = -3
+            break
+        else:
+            Q = np.column_stack([ Q, wcol/beta ])
+            R = np.block([[ R , proj ] , [ np.zeros((1,ncolQ)) , beta ]])
+            ncolQ = ncolQ + 1
+            status = 0
+            
+    return Q, R, status
 
 def residual(V, A, Q, R, ncols, nord):
     
     W = np.column_stack([ A.T @ V , V ])  
     
-    Q, R = updateQR(W, Q, R)
+    Q, R, status = updateQR(W, Q, R)
     
-    # compute | R P R^T |_fro where P amounts to switching column blocks
-    j2 = ncols[0]    # m = B.shape[1]
-    RP  = np.copy(R)
-    for nc in ncols[1:]: # width of the column range to swap in iterate
-        # identify contiguous column ranges of interest
-        i1 = j2; j1 = j2 + nc; c1 = slice(i1,j1)
-        i2 = j1; j2 = j1 + nc; c2 = slice(i2,j2)
-        # swap
-        tmp = RP[:,c1].copy()
-        RP[:,c1] = RP[:,c2]
-        RP[:,c2] = tmp
-    nrm = linalg.norm(RP @ R.T, ord=nord)
+    if status == 0:
+        # compute | R P R^T |_fro where P amounts to switching column blocks
+        j2 = ncols[0]    # m = B.shape[1]
+        RP  = np.copy(R)
+        for nc in ncols[1:]: # width of the column range to swap in iterate
+            # identify contiguous column ranges of interest
+            i1 = j2; j1 = j2 + nc; c1 = slice(i1,j1)
+            i2 = j1; j2 = j1 + nc; c2 = slice(i2,j2)
+            # swap
+            tmp = RP[:,c1].copy()
+            RP[:,c1] = RP[:,c2]
+            RP[:,c2] = tmp
+        nrm = linalg.norm(RP @ R.T, ord=nord)
+    else:
+        nrm = 0
+        
     return Q,R,nrm
 
 def get_opt_shifts(a0,b0,c0,d0,n):
