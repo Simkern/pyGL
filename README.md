@@ -13,3 +13,4 @@ Summary:
 1. Implementations of the Low-rank Cholesky-Factor ADI method (LRCFADI) for real matrices (involving only real algebra) for the case of purely real and complex conjugate shifts
 2. Utils including Gram-Schmidt and Arnoldi factorisations to compute suboptimal shift heuristics
 3. Optimal shift calculation for the case of symmetric system matrices A
+4. Extensions of the solution algorithm to support iterative solutions of the linear systems (GMRES) with or without Laplace-preconditioning.
