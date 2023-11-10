@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 
-from scipy import linalg
+from scipy import linalg, sparse
 from matplotlib import pyplot as plt
 
 sys.path.append('..')
@@ -10,7 +10,9 @@ from core.CGL_parameters import CGL, CGL2
 from core.diff_mat import FDmat
 
 from solvers.arnoldi import arn, arn_inv
-from solvers.lyapunov import lrcfadic_r_gmres
+from solvers.lyapunov import lrcfadic_r, lrcfadic_r_gmres, lrcfadic_r_gmres_matvec
+
+from distinctipy import distinctipy
 
 plt.close("all")
 
@@ -49,6 +51,13 @@ A = np.block([[Ar, -Ai],[Ai, Ar]])
 Nx = 2*Nxc
 
 D = linalg.eigvals(A)
+
+# Laplacian preconditioner
+Lc = np.asarray(gamma*DM2c.todense())
+Lr = np.real(Lc)
+Li = np.imag(Lc)
+L = np.block([[Lr,-Li],[Li,Lr]])
+lu,piv = linalg.lu_factor(L)
 
 # compute shifts
 b0 = np.ones((Nx,))
@@ -170,32 +179,39 @@ print(f'  Number of available shifts:     {pAinv.size:3d}')
 #pvec(pAinv)
 print(f'  Shifts with unique modulus:     {npick:3d},  ',end='')
 print(f'  Total:  {pAnreal + 2*pAncmplx:3d},  ',end='')
-print(f'  ({pAnreal} real / {pAncmplx} complex conjugate)')
+print(f'  ({pAnreal} real / {pAncmplx} complex conjugate)\n')
 #pvec(pAinv_v)
 
-#print('Override')
-#p_v = np.array([ -0.093, -43.649, -121.179 + 1j*114.858 ])
-#p_v = np.array([-0.093, -43.649])
-#p_v = np.array([-313.048 -408.700*1j], ndmin = 1)
-#p_v = np.array([-303.106 + -390.657*1j, -313.048 -408.700*1j])
-
-tol = 1e-12
+lyaptol = 1e-8
 gmrestol_v = [ 10**(-i) for i in range(2,13,2) ]
+colors = distinctipy.get_colors(len(gmrestol_v))
 n = 10
 nA= 10
+
+Mx = sparse.linalg.LinearOperator(A.shape, lambda x: linalg.lu_solve((lu,piv), x))
 
 fig = plt.figure(2)
 pin = np.random.permutation(np.concatenate((pA_v[:nA],pAinv_v[:n-nA])))
 for i, gmrestol in enumerate(gmrestol_v):
     print(f'gmres_tol = {gmrestol:.1e}')
     Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel = \
-        lrcfadic_r_gmres(A, B, pin, tol,'tol', Xref, gmrestol)
-    plt.plot(ires,np.log10(nrmx),label=f'tol = {gmrestol:.1e}')
+        lrcfadic_r_gmres_matvec(A, B, np.eye(Nx), pin, lyaptol,'tol', Xref, gmrestol)
+    plt.plot(ires,np.log10(nrmx), color=colors[i], label=f'tol = {gmrestol:.1e}')
+
+for i, gmrestol in enumerate(gmrestol_v):
+    print(f'gmres_tol = {gmrestol:.1e}')
+    Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel = \
+        lrcfadic_r_gmres_matvec(A, B, Mx, pin, lyaptol,'tol', Xref, gmrestol)
+    plt.plot(ires,np.log10(nrmx),color=colors[i], linestyle='--',label=f'tol = {gmrestol:.1e} (prec)')
+Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel = lrcfadic_r(A, B, pin, lyaptol,'tol', Xref)
+plt.plot(ires,np.log10(nrmx),'k-',label='LU')
 plt.legend()
-plt.title(f'{n} CC shifts from K(A,b)')
+plt.title(f'GMRES {n} CC shifts from K(A,b)')
 plt.xlabel('iterations')
 plt.ylabel('||X_i - X_ref||_F/ ||X_ref||_F')
 plt.show()
+
+sys.exit()
 
 fig = plt.figure(3)
 nA= 5
@@ -203,10 +219,15 @@ pin = np.random.permutation(np.concatenate((pA_v[:nA],pAinv_v[:n-nA])))
 for i, gmrestol in enumerate(gmrestol_v):
     print(f'gmres_tol = {gmrestol:.1e}')
     Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel = \
-        lrcfadic_r_gmres(A, B, pin, tol,'tol', Xref, gmrestol)
+        lrcfadic_r_gmres_matvec(A, B, np.eye(Nx), pin, lyaptol,'tol', Xref, gmrestol)
     plt.plot(ires,np.log10(nrmx),label=f'tol = {gmrestol:.1e}')
+for i, gmrestol in enumerate(gmrestol_v):
+    print(f'gmres_tol = {gmrestol:.1e}')
+    Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel = \
+        lrcfadic_r_gmres_matvec(A, B, Mx, pin, lyaptol,'tol', Xref, gmrestol)
+    plt.plot(ires,np.log10(nrmx),linestyle='--',label=f'tol = {gmrestol:.1e} (prec)')
 plt.legend()
-plt.title(f'{n} CC shifts, {nA} from K(A,b), {n-nA} from K(A^-1,b)')
+plt.title(f'GMRES {n} CC shifts, {nA} from K(A,b), {n-nA} from K(A^-1,b)')
 plt.xlabel('iterations')
 plt.ylabel('||X_i - X_ref||_F/ ||X_ref||_F')
 plt.show(block=False)

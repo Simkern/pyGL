@@ -6,6 +6,7 @@ from itertools import compress
 import matplotlib.pyplot as plt
 
 from scipy.sparse.linalg import gmres
+from scipy.sparse.linalg import aslinearoperator
 from scipy.linalg import lu_factor, lu_solve, qr, norm
 
 sys.path.append('..')
@@ -125,7 +126,7 @@ def lrcfadic_r(A,B,pin,stop_criterion,criterion_type,Xref):
         tol = None
     elif criterion_type == 'tol':
         res_tol = True
-        niter = 60
+        niter = 200
         tol = stop_criterion
     else:
         raise ValueError('Unsupported stop criterion')
@@ -297,6 +298,12 @@ def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
     I = np.eye(A.shape[0])
     l = pin.size
     
+    def gmres_solve(A,b):
+        etime = time.time()
+        x, info = gmres(A, b, tol=stol, maxiter=2000)
+        etime = time.time() - etime
+        return x, info, etime
+    
     if criterion_type == 'niter':
         res_tol = False    
         niter   = stop_criterion
@@ -362,17 +369,13 @@ def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
         
     if p1_is_real:
         q   = np.sqrt(-2*p1)
-        etime = time.time()
-        V1t, exitCode = gmres(A_v[0], B, tol=stol)
-        etime_gmres[0] = time.time() - etime
+        V1t, info, etime_gmres[0] = gmres_solve(A_v[0], B)
         V2t = 0*V1t #dummy
         Z   = q*V1t
     else: # p1 complex
         q1  = 2*np.sqrt(-np.real(p1))*np.abs(p1)
         q2  = 2*np.sqrt(-np.real(p1))
-        etime = time.time()
-        V1t, exitCode = gmres(A_v[0], B, tol=stol)
-        etime_gmres[0] = time.time() - etime
+        V1t, info, etime_gmres[0] = gmres_solve(A_v[0], B)
         V1  = q1*V1t
         V2t = A @ V1t
         V2  = q2*V2t
@@ -399,16 +402,12 @@ def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
             q  = np.sqrt(-2*p)
             if p_old_is_real:
                 f1  = (p + p_old)
-                etime = time.time()
-                Vtmp, exitCode = gmres(A_v[ip], V1t_old, tol=stol)
-                etime_gmres[i] = time.time() - etime
+                Vtmp, info, etime_gmres[i] = gmres_solve(A_v[ip], V1t_old)
                 V1t = V1t_old - f1*Vtmp
             else: # p_old complex
                 f1  = 2*np.real(p_old) + p
                 f2  = np.abs(p_old)**2 + 2*p*np.real(p_old) + p**2
-                etime = time.time()
-                Vtmp, exitCode = gmres(A_v[ip], V1t_old, tol=stol)
-                etime_gmres[i] = time.time() - etime
+                Vtmp, info, etime_gmres[i] = gmres_solve(A_v[ip], V1t_old)
                 V1t = V2t_old - f1*V1t_old + f2*Vtmp
             Vnew = q*V1t
             V2t  = 0*V1t
@@ -417,16 +416,12 @@ def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
             q2 = 2*np.sqrt(-np.real(p))
             if p_old_is_real:
                 Vtmp = A @ V1t_old - p_old*V1t_old
-                etime = time.time()
-                V1t, exitCode = gmres(A_v[ip], Vtmp, tol=stol)
-                etime_gmres[i] = time.time() - etime              
+                V1t, info, etime_gmres[i] = gmres_solve(A_v[ip], Vtmp)           
             else: # p_old complex
                 f1   = np.abs(p_old)**2 - np.abs(p)**2
                 f2   = 2*np.real(p_old + p)
                 Vtmp = f1*V1t_old - f2*V2t_old
-                etime = time.time()
-                Vtmp2, exitCode = gmres(A_v[ip], Vtmp, tol=stol)
-                etime_gmres[i] = time.time() - etime
+                Vtmp2, info, etime_gmres[i] = gmres_solve(A_v[ip], Vtmp)
                 V1t  = V1t_old + Vtmp2
             V2t  = A @ V1t
             V1   = q1*V1t
@@ -489,15 +484,208 @@ def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
         print('  min/avg/max :',end='')
         print(f' {    min(etime_gmres[etime_gmres > 0]):10.6f}',end='')
         print(f' {np.mean(etime_gmres[etime_gmres > 0]):10.6f}',end='')
+        print(f' {    max(etime_gmres[etime_gmres > 0]):10.6f}\n')    
+    
+    return Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel
+
+def lrcfadic_r_gmres_matvec(A,B,M,pin,stop_criterion,criterion_type,Xref,stol):
+    
+    M = aslinearoperator(M)
+    
+    def gmres_solve(A,b):
+        etime = time.time()
+        x, info = gmres(A, b, M=M, tol=stol, maxiter=2000)
+        etime = time.time() - etime
+        return x, info, etime
+    
+    nord = None# defaults to 'fro' (also for vectors)
+    I = np.eye(A.shape[0])
+    l = pin.size
+    
+    if criterion_type == 'niter':
+        res_tol = False    
+        niter   = stop_criterion
+        rounds  = np.ceil(niter/l)
+        nmax    = rounds*l
+        tol     = None
+    elif criterion_type == 'tol':
+        res_tol = True
+        rounds  = 20
+        nmax    = rounds*l
+        niter   = nmax
+        tol     = stop_criterion
+    else:
+        raise ValueError('Unsupported stop criterion')
+    
+    is_real = np.isreal(pin)   
+    A_v = []
+    p_v = np.array([])
+    singlestep = []
+    for i, (p, is_r) in enumerate(zip(pin,is_real)):
+        if is_r:
+            Atmp = A + np.real(p)*I
+            singlestep.append(True)
+        else:
+            s_i = 2*np.real(p)
+            t_i = np.abs(p)**2
+            Atmp = A @ A + s_i*A + t_i*I
+            singlestep.append(False)
+        A_v.append(Atmp)
+        p_v = np.append(p_v,p)
+      
+    res_step = max(l,20)   
+    
+    Q,R  = qr(B,mode='economic')
+            
+    nrm0 = norm(R @ R.T, ord=nord)
+
+    ncols = [ B.shape[1] ]
+
+    res     = [ nrm0 ]
+    res_rel = [ 1 ] 
+    if_res = True
+    nrmx0 = norm(Xref, ord=nord)
+    nrmx = [ 1 ]
+    nrmz = [ norm(B, ord=nord) ]
+    nrmz_rel = [ 1 ]
+
+    ip = 0
+    ires = [ 0 ]
+    
+    is_converged = False
+    is_breakdown = False
+    
+    etime_res   = []
+    etime_CFADI = 0
+    etime_gmres = np.zeros((nmax,))
+    
+    # initialisation
+    p1         = p_v[0]
+    p1_is_real = np.isreal(p1)
+    if p1_is_real:
+        p1 = np.real(p1)
+        
+    if p1_is_real:
+        q   = np.sqrt(-2*p1)   
+        V1t, info, etime_gmres[0] = gmres_solve(A_v[0], B)
+        V2t = 0*V1t #dummy
+        Z   = q*V1t
+    else: # p1 complex
+        q1  = 2*np.sqrt(-np.real(p1))*np.abs(p1)
+        q2  = 2*np.sqrt(-np.real(p1))
+        V1t, info, etime_gmres[0] = gmres_solve(A_v[0], B)
+        V1  = q1*V1t
+        V2t = A @ V1t
+        V2  = q2*V2t
+        Z   = np.column_stack([ V1, V2 ])
+    if not info == 0:
+        print('Step 1: GMRES unconverged.')
+    
+    p_old   = p1
+    V1t_old = V1t
+    V2t_old = V2t
+    
+    # iteration
+    ip = 0
+    for i in range(1,niter):
+        etime = time.time()
+        
+        ip = (ip + 1) % l
+        
+        p             = p_v[ip]
+        p_is_real     = np.isreal(p)
+        if p_is_real:
+            p = np.real(p)
+        p_old_is_real = np.isreal(p_old)
+                  
+        if p_is_real:
+            q  = np.sqrt(-2*p)
+            if p_old_is_real:
+                f1  = (p + p_old)
+                Vtmp, info, etime_gmres[i] = gmres_solve(A_v[ip], V1t_old)
+                V1t = V1t_old - f1*Vtmp
+            else: # p_old complex
+                f1  = 2*np.real(p_old) + p
+                f2  = np.abs(p_old)**2 + 2*p*np.real(p_old) + p**2
+                Vtmp, info, etime_gmres[i] = gmres_solve(A_v[ip], V1t_old)
+                V1t = V2t_old - f1*V1t_old + f2*Vtmp
+            Vnew = q*V1t
+            V2t  = 0*V1t
+        else: # p complex
+            q1 = 2*np.sqrt(-np.real(p))*np.abs(p)
+            q2 = 2*np.sqrt(-np.real(p))
+            if p_old_is_real:
+                Vtmp = A @ V1t_old - p_old*V1t_old
+                V1t, info, etime_gmres[i] = gmres_solve(A_v[ip], Vtmp)     
+            else: # p_old complex
+                f1   = np.abs(p_old)**2 - np.abs(p)**2
+                f2   = 2*np.real(p_old + p)
+                Vtmp = f1*V1t_old - f2*V2t_old
+                Vtmp2, info, etime_gmres[i] = gmres_solve(A_v[ip], Vtmp)
+                V1t  = V1t_old + Vtmp2
+            V2t  = A @ V1t
+            V1   = q1*V1t
+            V2   = q2*V2t
+            Vnew = np.column_stack([ V1, V2 ]) 
+        Z = np.column_stack([ Z, Vnew ])
+        if not info == 0:
+            print(f'Step {i+1:3d}: GMRES unconverged.')
+            
+        p_old   = p
+        V1t_old = V1t
+        V2t_old = V2t
+                    
+        etime_CFADI = etime_CFADI + time.time() - etime
+          
+        if if_res and i > 0 and ( i < 50 or i % res_step == 0):
+            etime = time.time()
+            try:
+                newcols = Vnew.shape[1]
+            except IndexError:
+                newcols = 1
+            ncols.append(newcols)
+            Q, R, nrm = residual(Vnew, A, Q, R, ncols, nord)
+            res.append(nrm)
+            res_rel.append(nrm/nrm0)
+            ires.append(i)
+            nrmx.append(norm(Xref - Z @ Z.T, ord=nord)/nrmx0)
+            nrmz.append(norm(Vnew, ord=nord))
+            nrmz_rel.append(nrmz[-1]/res[-2])
+            etime_res.append(time.time() - etime)
+            
+            if res_tol and nrmx[-1] < tol:
+                is_converged = True
+                break
+            if nrm == 0:
+                is_breakdown = True
+                break
+    etime_CFADI = time.time() - etime
+            
+    print('Low-Rank CF-ADI:')
+    if is_converged:
+        print(f'  Converged at step {i+1}.')
+        print(f'  ||X_i - X_ref||_F/||X_ref||_F = {nrmx[-1]}')
+        print(f'  etime solve : {etime_CFADI:10.6f}')
+        print(f'  etime res :   {np.sum(etime_res):10.6f}   ',end='')
+        print(f'  min/avg/max : {min(etime_res):10.6f} {np.mean(etime_res):10.6f} {max(etime_res):10.6f}')
+        print(f'  etime gmres : {np.sum(etime_gmres):10.6f}   ',end='')
+        print('  min/avg/max :',end='')
+        print(f' {    min(etime_gmres[etime_gmres > 0]):10.6f}',end='')
+        print(f' {np.mean(etime_gmres[etime_gmres > 0]):10.6f}',end='')
         print(f' {    max(etime_gmres[etime_gmres > 0]):10.6f}\n')
-    
-    # fig = plt.figure(1)
-    # etime_g      = etime_gmres.reshape((l,rounds))    
-    # for i in range(rounds):
-    #     if not np.sum(etime_g[:,i]) == 0:
-    #         plt.plot(etime_g)
-    # plt.yscale('log')
-    # plt.show()
-    
+    else:
+        if is_breakdown:
+            print(f'  QR GS breakdown after {i} iterations.')
+        else:
+            print(f'  Maximum number of iterations ({niter:d}) reached.')
+        print(f'  ||X_i - X_ref||_F/||X_ref||_F = {nrmx[-1]}')
+        print(f'  etime solve : {etime_CFADI:10.6f}')
+        print(f'  etime res :   {np.sum(etime_res):10.6f}   ',end='')
+        print(f'  min/avg/max : {min(etime_res):10.6f} {np.mean(etime_res):10.6f} {max(etime_res):10.6f}')
+        print(f'  etime gmres : {np.sum(etime_gmres):10.6f}   ',end='')
+        print('  min/avg/max :',end='')
+        print(f' {    min(etime_gmres[etime_gmres > 0]):10.6f}',end='')
+        print(f' {np.mean(etime_gmres[etime_gmres > 0]):10.6f}',end='')
+        print(f' {    max(etime_gmres[etime_gmres > 0]):10.6f}\n')    
     
     return Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel
