@@ -7,26 +7,6 @@ sys.path.append('..')
 from core.utils import en
 
 def arn(A, b, n):
-    """Compute a basis of the (n + 1)-Krylov subspace of the matrix A.
-
-    This is the space spanned by the vectors {b, Ab, ..., A^n b}.
-
-    Parameters
-    ----------
-    A : array_like
-        An m × m array.
-    b : array_like
-        Initial vector (length m).
-    n : int
-        One less than the dimension of the Krylov subspace, or equivalently the *degree* of the Krylov space. Must be >= 1.
-    
-    Returns
-    -------
-    Q : numpy.array
-        An m x (n + 1) array, where the columns are an orthonormal basis of the Krylov subspace.
-    H : numpy.array
-        An (n + 1) x n array. A on basis Q. It is upper Hessenberg.
-    """
     eps = 1e-12
     H = np.zeros((n + 1, n), dtype=complex)
     Q = np.zeros((A.shape[0], n + 1), dtype=complex)
@@ -51,27 +31,6 @@ def arn(A, b, n):
     return Q, H
 
 def arn_inv(A, b, n):
-    """Compute a basis of the (n + 1)-Krylov subspace of the matrix A^-1.
-
-    This is the space spanned by the vectors {b, A^-1 b, ..., A^-n b}.
-
-    Parameters
-    ----------
-    A : array_like
-        An m × m array.
-        The algorithm will compute the LU factorisation and solve the linear system with it at each iterate
-    b : array_like
-        Initial vector (length m).
-    n : int
-        One less than the dimension of the Krylov subspace, or equivalently the *degree* of the Krylov space. Must be >= 1.
-    
-    Returns
-    -------
-    Q : numpy.array
-        An m x (n + 1) array, where the columns are an orthonormal basis of the Krylov subspace.
-    H : numpy.array
-        An (n + 1) x n array. A on basis Q. It is upper Hessenberg.
-    """
     eps = 1e-12
     H = np.zeros((n + 1, n), dtype=complex)
     Q = np.zeros((A.shape[0], n + 1), dtype=complex)
