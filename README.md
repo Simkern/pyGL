@@ -10,7 +10,7 @@ Summary:
 Matrix-free tools for solution of Lyapunov equations
 
 Summary:
-1. Implementations of the Low-rank Cholesky-Factor ADI method (LRCFADI) for real matrices (involving only real algebra) for the case of purely real and complex conjugate shifts
+1. Implementations of the Low-rank Cholesky-Factor ADI method (LRCFADI) for real matrices (involving only real algebra) for the case of purely real and complex conjugate shifts.
    The code for the LRCFADI is based on the matlab implementation of from LYAPACK by Pentzl with adaptations for purely real algebra.
 3. Utils including Gram-Schmidt and Arnoldi factorisations to compute suboptimal shift heuristics
 4. Optimal shift calculation for the case of symmetric system matrices A
