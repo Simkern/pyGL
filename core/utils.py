@@ -25,13 +25,15 @@ def en(a):
     """
     return np.sqrt(enorm(a))
 
-def pmat(a):
+def pmat(a, name=' '):
+    print(f'\npmat: {name}')
     for row in a:
         for col in row:
             print("{:8.3f}".format(col), end=" ")
         print("")
 
-def pvec(v):
+def pvec(v, name=' '):
+    print(f'\npvec: {name}')
     l = v.size
     lp = 2
     lmax = 2*lp
