@@ -5,7 +5,14 @@ Python toolbox for the solution of the complex Ginzburg-Landau equations using f
 Summary:
 1. Differentiation matrices for the second-order finite difference scheme
 2. Integration routines for the linear and non-linear CGL equations based on the Crank-Nicolson discretisation of the PDEs.
-3. Testing suites for the computation of the eigenvalue spectrum and the optimal initial condition for maximum transient growth via matrix exponentiation and direct-adjoint looping.
+3. Testing suites:
+   1. Time integration of the CGL equations
+   2. Computation of the eigenvalue spectrum of the linear operator
+   3. Optimal initial condition for maximum transient growth via matrix exponentiation and direct-adjoint looping
+   4. Arnoldi factorization
+   5. Algorithms for the solution of the Lyapunov equation AX + XA' = BB'
+        a. LRCFADI (real (LU-based), complex (LU-based), real (GMRES-based))
+        b. K-PIK (real (LU-based))
 
 Matrix-free tools for solution of Lyapunov equations
 
