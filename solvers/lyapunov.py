@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import aslinearoperator
-from scipy.linalg import lu_factor, lu_solve, qr, norm
+from scipy.linalg import lu_factor, lu_solve, solve, solve_lyapunov, svd, qr, inv, norm
 
 sys.path.append('..')
 
@@ -55,7 +55,7 @@ def lrcfadi(A,B,p,stop_criterion,criterion_type,Xref):
     ip = 0
     ires = [ 0 ]
     
-    is_converged = False
+    is_converged = Falsem_max
     is_breakdown = False
     
     etime_res   = []
@@ -689,3 +689,139 @@ def lrcfadic_r_gmres_matvec(A,B,M,pin,stop_criterion,criterion_type,Xref,stol):
         print(f' {    max(etime_gmres[etime_gmres > 0]):10.6f}\n')    
     
     return Z, ires, res, res_rel, nrmx, nrmz, nrmz_rel
+
+def kpik(A,B,k_max,tol,tolY):
+    
+    # Based on kpik.m avalible from V. Simoncini's website (http://www.dm.unibo.it/~simoncin/software.html)
+    # Essentially a translation of the matlab code to python
+
+    # Approximately solve
+    #       A X + X A' + BB' = 0
+    # by means of the extended Krylov subspace method
+    # ARGUMENTS
+    #     'A'     : coeff matrix, A < 0
+    #     'B'     : factor of rhs,   nxm matrix with m << n
+    #     'k_max' : max Krylov subspace dimension
+    #     'tol'   : stopping tolerance based on the backwards error,
+    #               with stopping criterion
+    #                || A X + X A'- BB'||
+    #               ----------------------   < tol
+    #               ||BB'|| + ||A|| ||X||
+    #              computed in a cheap manner.
+    #     'tolY'  : threshold for a posteriori rank reduction of the 
+    #               resulting Y matrix    
+    # Output
+    #     'Z'     : solution factor s.t. X = Z Z'
+    #     'err2'  : history of scaled residual, as above
+    #     'etime' : elapsed time
+    
+    # initialisation
+    etime = time.time()
+    # sizes & constants
+    n, sh = B.shape
+    s     = 2*sh
+    sqrt2 = np.sqrt(2)
+    rho   = 1 #dummy
+    # norms
+    normB = np.linalg.norm(B, 'fro')**2
+    normA = np.linalg.norm(A, 'fro')
+    # variables
+    H    = np.zeros(((k_max+1)*s,k_max*s))
+    T    = np.zeros(((k_max+1)*s,k_max*s))
+    L    = np.zeros(((k_max+1)*s,k_max*s))
+    err2 = np.zeros(k_max)
+    odds = []
+
+    # compute LU factorisation of A
+    luA,piv = lu_factor(A)
+
+    # initialise Krylov basis
+    V1 = np.block([ B , lu_solve((luA,piv),B ) ])
+    # Orthogonalize
+    U,R  = qr(V1,mode='economic')
+    Rinv = inv(R)
+    R    = R[:sh,:sh]
+    R2   = R @ R.T 
+
+    for j in range(k_max):
+        
+        # indices
+        jms = j*s
+        j1s = (j + 2) * s
+        js  = (j + 1) * s
+        js1 = js
+        jsh = j*s + sh
+        
+        # compute new vectors for the Krylov basis
+        Up = np.zeros((n, s))
+        Up[:, :sh] = A @ U[:, jms:jsh]
+        Up[:, sh:] = lu_solve((luA,piv), U[:, jsh:js])
+        
+        # orthogonalise new vector wrt. current Krylov basis, add to Hessenberg matrix
+        for l in range(2):      # MGS
+            k_min = max(0, j - k_max - 1)
+            for kk in range(k_min, j + 1):
+                k1 = kk * s
+                k2 = (kk+1) * s
+                proj              = U[:, k1:k2].T @ Up
+                H[k1:k2, jms:js] += proj
+                Up               -= U[:, k1:k2] @ proj
+
+        # orthogonalise new vectors wrt. to each other, add subdiagonal block to Hessenberg matrix
+        if j < k_max:
+            Up, H[js1:j1s, jms:js] = qr(Up, mode='economic')
+            Hinv                   = inv(H[js1:j1s, jms:js])
+
+        # determine the coefficient matrix for the projected problem
+        # NOTE: avoids the explicit multiplication with A
+        I = np.eye(js + s)
+        if j == 0:
+            # A/B = (B.T\A.T).T
+            V1 = solve(Rinv[:sh, :sh].T,   H[:s+sh, :sh].T).T
+            V2 = solve(Rinv[:sh, :sh].T,np.eye(s+sh, sh).T).T
+            L[:s+sh,:sh] = np.block([ V1, V2 ]) @ Rinv[:s, sh:s]
+        else:
+            L[:js+s,j*sh:(j+1)*sh] += H[:js+s, jms:jms+sh] @ rho
+            
+        odds.extend(list(range(jms, jms + sh)))
+        evens = list(range(js))
+        evens = [x for x in evens if x not in odds]
+        
+        # odd columns
+        T[:js+s,  odds]  = H[:js+s,  odds]
+        # even columns
+        T[:js+sh, evens] = L[:js+sh, :(j+1)*sh]
+
+        L[:js+s, (j+1)*sh:(j+2)*sh] = ( I[:js+s, js-sh:js] 
+                                   - T[:js+s, :js] @ H[:js, js-sh:js] 
+                                   ) @ Hinv[sh:s, sh:s]
+
+        rho = inv(Hinv[:sh, :sh]) @ Hinv[:sh, sh:s]
+
+        # Solve the projected problem using Stuart-Bartels
+        Y = solve_lyapunov(T[:js, :js], np.eye(js, sh) @ R2 @ np.eye(sh,js))
+        # Ensure that the result is symmetric
+        Y = (Y + Y.T) / 2
+
+        # Compute residual
+        cc = np.block([H[js1:j1s, js-s:js-sh], L[js1:j1s, j*sh:(j+1)*sh]])
+            
+        normX = norm(Y, 'fro')
+        err2[j] = sqrt2 * norm(cc @ Y[js-s:js, :], 'fro') / (normB + normA * normX)
+
+        if err2[j] < tol:
+            break
+        else:
+            U = np.block([U,Up])
+
+    # reduce rank of Y if possible
+    uY, sY, _ = svd(Y)
+    is_ = np.sum(np.abs(sY) > tolY)
+    Y0 = uY[:, :is_] @ np.diag(np.sqrt(sY[:is_]))
+
+    Z = U[:, :js] @ Y0
+    k_eff = js
+    err2 = err2[:j + 1]
+    etime = time.time() - etime
+    
+    return Z, err2, k_eff, etime
