@@ -55,14 +55,14 @@ def updateQR(W,Q,R):
         for iq in range(ncolQ):      # Q grows at every outer iteration 
             qcol     = Q[:,iq]
             proj[iq] = np.dot(qcol , wcol)
-            wcol    += - proj[iq] * qcol
+            wcol    -= proj[iq] * qcol
         beta = en(wcol)
         if beta < 1e-8:              # 2nd pass fixes orthonormality in edge cases
             proj2 = np.zeros((ncolQ,1))
             for iq in range(ncolQ):
                 qcol      = Q[:,iq]
                 proj2[iq] = np.dot(qcol , wcol)
-                wcol     += - proj2[iq] * qcol
+                wcol     -= proj2[iq] * qcol
             proj += proj2
             beta  = en(wcol)
         # add column to basis and inflate R
