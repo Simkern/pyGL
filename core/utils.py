@@ -25,6 +25,13 @@ def en(a):
     """
     return np.sqrt(enorm(a))
 
+def p(x, name=' '):
+    try:
+        d2 = x.shape[1]
+        pmat(x, name)
+    except:
+        pvec(x, name)
+
 def pmat(a, name=' '):
     print(f'\npmat: {name}')
     for row in a:

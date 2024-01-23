@@ -4,15 +4,17 @@ import sys
 
 sys.path.append('..')
 
-from core.utils import en
+from git.core.utils import en
 
-def arn(A, b, n):
+def arn(A, b, n, verb = 0):
     eps = 1e-12
-    H = np.zeros((n + 1, n), dtype=complex)
-    Q = np.zeros((A.shape[0], n + 1), dtype=complex)
+    H = np.zeros((n + 1, n), dtype=A.dtype)
+    Q = np.zeros((A.shape[0], n + 1), dtype=A.dtype)
     # Normalize the input vector
     Q[:, 0] = b / en(b)  # Use it as the first Krylov vector
     for k in range(n):
+        if verb > 0:
+            print(f'  {k:3d}')
         v = A @ Q[:, k ]  # Generate a new candidate vector
         # for each colum of Q that we have already constructed
         for i in range(k+1):
@@ -32,8 +34,8 @@ def arn(A, b, n):
 
 def arn_inv(A, b, n):
     eps = 1e-12
-    H = np.zeros((n + 1, n), dtype=complex)
-    Q = np.zeros((A.shape[0], n + 1), dtype=complex)
+    H = np.zeros((n + 1, n), dtype=A.dtype)
+    Q = np.zeros((A.shape[0], n + 1), dtype=A.dtype)
     # Normalize the input vector
     Q[:, 0] = b / en(b)  # Use it as the first Krylov vector
     # Generate LU factorisation of A
