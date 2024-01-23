@@ -10,7 +10,10 @@ Summary:
    2. Computation of the eigenvalue spectrum of the linear operator
    3. Optimal initial condition for maximum transient growth via matrix exponentiation and direct-adjoint looping
    4. Arnoldi factorization
-   5. Algorithms for the solution of the Lyapunov equation AX + XA' = BB': LRCFADI (real (LU-based), complex (LU-based), real (GMRES-based)). K-PIK (real (LU-based))
+   5. Algorithms for the solution of the Lyapunov equation AX + XA' = -BB':
+        a) Low-rank Cholesky-Factor ADI - LRCFADI (real (LU-based), complex (LU-based), real (GMRES-based))
+        b) Krylov plus Inverse-Krylov - K-PIK (real (LU-based), real (GMRES-based))
+        c) Low-rank approximation of differential Lyapunov equations using an operator-splitting-based time integrator (real)
 
 Matrix-free tools for solution of Lyapunov equations
 

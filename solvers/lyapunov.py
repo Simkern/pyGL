@@ -2,16 +2,13 @@ import numpy as np
 import time
 import sys
 
-from itertools import compress
-import matplotlib.pyplot as plt
-
 from scipy.sparse.linalg import gmres
 from scipy.sparse.linalg import aslinearoperator
-from scipy.linalg import lu_factor, lu_solve, solve, solve_lyapunov, svd, qr, inv, norm
+from scipy.linalg import lu_factor, lu_solve, solve, solve_lyapunov, svd, qr, inv, norm, expm
 
 sys.path.append('..')
 
-from solvers.lyap_utils import residual
+from git.solvers.lyap_utils import residual, M_ForwardMap, G_ForwardMap
 
 def lrcfadi(A,B,p,stop_criterion,criterion_type,Xref):
     
@@ -55,7 +52,7 @@ def lrcfadi(A,B,p,stop_criterion,criterion_type,Xref):
     ip = 0
     ires = [ 0 ]
     
-    is_converged = Falsem_max
+    is_converged = False
     is_breakdown = False
     
     etime_res   = []
@@ -294,7 +291,7 @@ def lrcfadic_r(A,B,pin,stop_criterion,criterion_type,Xref):
 
 def lrcfadic_r_gmres(A,B,pin,stop_criterion,criterion_type,Xref,stol):
     
-    nord = None# defaults to 'fro' (also for vectors)
+    nord = None # defaults to 'fro' (also for vectors)
     I = np.eye(A.shape[0])
     l = pin.size
     
@@ -825,3 +822,205 @@ def kpik(A,B,k_max,tol,tolY):
     etime = time.time() - etime
     
     return Z, err2, k_eff, etime
+
+def kpik_gmres(A,B,M,k_max,tol,tolY,stol):
+    
+    # Based on kpik.m avalible from V. Simoncini's website (http://www.dm.unibo.it/~simoncin/software.html)
+    # Essentially a translation of the matlab code to python
+    
+    nmatvec = 0
+    
+    def gmres_solve(A,B):
+        etime = time.time()
+        counter = gmres_counter()
+        x, info = gmres(A, B, M=M, tol=stol, maxiter=6000, callback=counter)
+        etime = time.time() - etime
+        return x, info, etime, counter
+    
+    class gmres_counter(object):
+        def __init__(self):
+            self.niter = 0
+            self.rkv   = []
+        def __call__(self, rk=None):
+            self.niter += 1
+            self.rkv.append(rk)
+    
+    # initialisation
+    etime = time.time()
+    # sizes & constants
+    n, sh = B.shape
+    s     = 2*sh
+    sqrt2 = np.sqrt(2)
+    rho   = 1 #dummy
+    # norms
+    normB = np.linalg.norm(B, 'fro')**2
+    normA = np.linalg.norm(A, 'fro')
+    # variables
+    H    = np.zeros(((k_max+1)*s,k_max*s))
+    T    = np.zeros(((k_max+1)*s,k_max*s))
+    L    = np.zeros(((k_max+1)*s,k_max*s))
+    err2 = np.zeros(k_max)
+    odds = []
+
+    # initialise Krylov basis
+    rhs1, info, etime, counter = gmres_solve(A,B)
+    if info != 0:
+        print(counter.rkv[-1])
+    rhs1 = rhs1.reshape(-1, 1)
+    nmatvec += counter.niter   
+    V1                = np.block([ B , rhs1 ])
+    # Orthogonalize
+    U,R  = qr(V1,mode='economic')
+    Rinv = inv(R)
+    R    = R[:sh,:sh]
+    R2   = R @ R.T 
+
+    for j in range(k_max):
+        
+        # indices
+        jms = j*s
+        j1s = (j + 2) * s
+        js  = (j + 1) * s
+        js1 = js
+        jsh = j*s + sh
+        
+        # compute new vectors for the Krylov basis
+        Up = np.zeros((n, s))
+        Up[:, :sh] = A @ U[:, jms:jsh]
+        AinvU, info, etime, counter = gmres_solve(A, U[:, jsh:js])
+        if info != 0:
+            print(counter.rkv[-1])
+        Up[:, sh:] = AinvU.reshape(-1,1)
+        nmatvec += counter.niter
+        
+        # orthogonalise new vector wrt. current Krylov basis, add to Hessenberg matrix
+        for l in range(2):      # MGS
+            k_min = max(0, j - k_max - 1)
+            for kk in range(k_min, j + 1):
+                k1 = kk * s
+                k2 = (kk+1) * s
+                proj              = U[:, k1:k2].T @ Up
+                H[k1:k2, jms:js] += proj
+                Up               -= U[:, k1:k2] @ proj
+
+        # orthogonalise new vectors wrt. to each other, add subdiagonal block to Hessenberg matrix
+        if j < k_max:
+            Up, H[js1:j1s, jms:js] = qr(Up, mode='economic')
+            Hinv                   = inv(H[js1:j1s, jms:js])
+
+        # determine the coefficient matrix for the projected problem
+        # NOTE: avoids the explicit multiplication with A
+        I = np.eye(js + s)
+        if j == 0:
+            # A/B = (B.T\A.T).T
+            V1 = solve(Rinv[:sh, :sh].T,   H[:s+sh, :sh].T).T
+            V2 = solve(Rinv[:sh, :sh].T,np.eye(s+sh, sh).T).T
+            L[:s+sh,:sh] = np.block([ V1, V2 ]) @ Rinv[:s, sh:s]
+        else:
+            L[:js+s,j*sh:(j+1)*sh] += H[:js+s, jms:jms+sh] @ rho
+            
+        odds.extend(list(range(jms, jms + sh)))
+        evens = list(range(js))
+        evens = [x for x in evens if x not in odds]
+        
+        # odd columns
+        T[:js+s,  odds]  = H[:js+s,  odds]
+        # even columns
+        T[:js+sh, evens] = L[:js+sh, :(j+1)*sh]
+
+        L[:js+s, (j+1)*sh:(j+2)*sh] = ( I[:js+s, js-sh:js] 
+                                   - T[:js+s, :js] @ H[:js, js-sh:js] 
+                                   ) @ Hinv[sh:s, sh:s]
+
+        rho = inv(Hinv[:sh, :sh]) @ Hinv[:sh, sh:s]
+
+        # Solve the projected problem using Stuart-Bartels
+        Y = solve_lyapunov(T[:js, :js], np.eye(js, sh) @ R2 @ np.eye(sh,js))
+        # Ensure that the result is symmetric
+        Y = (Y + Y.T) / 2
+
+        # Compute residual
+        cc = np.block([H[js1:j1s, js-s:js-sh], L[js1:j1s, j*sh:(j+1)*sh]])
+            
+        normX = norm(Y, 'fro')
+        err2[j] = sqrt2 * norm(cc @ Y[js-s:js, :], 'fro') / (normB + normA * normX)
+        print(err2[j])
+
+        if err2[j] < tol:
+            break
+        else:
+            U = np.block([U,Up])
+
+    # reduce rank of Y if possible
+    uY, sY, _ = svd(Y)
+    is_ = np.sum(np.abs(sY) > tolY)
+    Y0 = uY[:, :is_] @ np.diag(np.sqrt(sY[:is_]))
+
+    Z = U[:, :js] @ Y0
+    k_eff = js
+    err2 = err2[:j + 1]
+    etime = time.time() - etime
+    
+    return Z, err2, k_eff, etime, nmatvec
+
+def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk):
+    
+    print('\nLow-rank operator-splitting method for Differential Lyapunov equations.\n')
+    
+    eps = 1e-12
+    n = X0.shape[0]
+    # generate inhomogeneity
+    Q = B @ B.T
+    nQ = np.linalg.norm(Q)
+    # check rank of inhomogeneity
+    Uq,Sq,_ = svd(Q)
+    rkq = sum(Sq > eps)
+    print(f'Numerical rank of inhomogeneity B  ({n:d}x{n:d}): {rkq:3d} (tol={eps:.2e})')
+    
+    # check rank of initial data
+    U,S,_ = svd(X0)
+    rk0 = sum(S > eps)
+    print(f'Numerical rank of initial data  X0 ({n:d}x{n:d}): {rk0:3d} (tol={eps:.2e})')
+    
+    if isinstance(rk,str) and rk_type == 'sigma_tol':
+        if rk < eps:
+            stol = eps
+        else:
+            stol = rk
+        S0   = np.diag(S[S > stol])
+        rk   = len(S)
+        print(f'\nMode sigma_tol:    stol = {stol:.2e}')
+        print(f'  Required rank of the initial data: {rk:d}\n')   
+    elif isinstance(rk,int) and rk > 0:
+        stol = eps
+        print('\nMode rank:')
+        print(f'  Chosen rank: {rk:d}\n')
+        S0 = np.diag(S[:rk])
+    # pick orthonormal columns
+    U0   = U[:,:rk]
+    
+    res = []
+    
+    nt    = int(np.ceil(Tend/dtaim))
+    dt    = Tend/nt
+    tspan = np.linspace(0, Tend, num=nt, endpoint=True)
+    
+    # precompute matrix exponential
+    exptA = expm(dt*A)
+    
+    print(f'Begin iteration:   0 --> {Tend:4.2f}      dt = {dt:.5e}')
+    etime = time.time()
+    iprint = int(np.floor(nt/10))
+    for it in range(nt):
+        if it % iprint == 0 or it == nt-1:
+            print(f'  Step {it+1:4d}: t = {tspan[it]:4.2f}')
+            X = U0 @ S0 @ U0.T
+            res.append(np.linalg.norm(A @ X + X @ A.T + Q)/nQ)
+        U1A, S1A = M_ForwardMap(A, U0, S0, dt, exptA)
+        U0, S0   = G_ForwardMap(U1A, S1A, Q, dt)
+    etime = time.time() - etime
+    print(f'Elapsed time:   {etime:4.2f} seconds.')
+    Uout = U0
+    Sout = S0
+    return Uout, Sout, res
+    

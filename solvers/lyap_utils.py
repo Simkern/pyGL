@@ -5,6 +5,7 @@ import sys
 from scipy import linalg
 from numpy import mean as am
 from scipy.stats import gmean as gm
+from scipy.linalg import expm, qr
 
 sys.path.append('../core')
 
@@ -181,3 +182,89 @@ def get_opt_shifts(a0,b0,c0,d0,n):
         #print(", ".join(format(shift, "7.2f") for shift in sorted(oG, reverse=True)))
     
     return np.array(oL),np.array(oG)
+
+def M_ForwardMap(A,U,S,tau,exptA=None):
+    """
+    Direct solution of the (stiff) linear part of the Lyapunov equation
+    in terms of the the low-rank factors U(t), S(t) over the time interval 
+    tau
+    
+    M(t) = U(t) @ S(t) @ U.T(t) of rank r
+    
+    Mdot = A @ M(t) + M(t) @ A.T
+    
+    M(t+tau) = expm(tau*A) @ U(t) @ S(t) @ U.T(t) @ expm(tau*A.T)
+
+    Parameters
+    ----------
+    A : np.array
+        System matrix.
+    U : np.array
+        Low-rank basis of initial data U(t).
+    S : np.array
+        Low-rank approximation of initial data S(t).
+    tau : float
+        Incremental integration time horizon.
+    exptA : np.array, optional
+        Precomputed matrix exponential of dt*A. The default is None.
+        This could also be done using a Krylov method to compute expm(t*A)*U 
+        directly, in particular if A is not explicitly available.
+
+    Returns
+    -------
+    UA : np.array
+        Low-rank basis of solution U(t + tau).
+    SA : np.array
+        Solution S(t + tau).
+    """
+    
+    if exptA is None:
+        U1    = expm(tau*A) @ U
+    else:
+        U1    = exptA @ U
+    UA, R = qr(U1,mode='economic')
+    SA    = R @ S @ R.T
+    
+    return UA, SA
+
+def G_ForwardMap(UA, SA, Q, tau):
+    """
+    Rank-preserving integration of the linear inhomogeneity Q that maintains 
+    orthonormality of the basis U(t) over the time interval tau
+    
+    Y(t) = U(t) @ S(t) @ U.T(t) of rank r
+    
+    Ydot = Q @ V @ V.T - U @ U.T @ Q @ V @ V.T + U @ U.T @ Q
+
+    Parameters
+    ----------
+    UA : np.array
+        Low-rank basis of the solution of the stiff part of the Lyapunov
+        equation.
+    SA : np.array
+        Low-rank solution of stiff part of the Lyapunov equation.
+    Q : np.array
+        Inhomogeneity in the Lyapunov equation.
+    tau : float
+        Incremental integration time horizon.
+
+    Returns
+    -------
+    UA : np.array
+        Low-rank basis of composed solution of the Lyapunov equation.
+    SA : np.array
+        Composed solution S(t + tau) of the Lyapunov equation
+    """
+    
+    # solve Kdot = Q @ U1A with K0 = UA @ SA for one step tau
+    K1 = UA @ SA + tau*(Q @ UA)
+    # orthonormalise K1
+    U1, Sh = qr(K1,mode='economic')
+    # solve Sdot = - U1.T @ Q @ UA with S0 = Sh for one step tau
+    St = Sh - tau*( U1.T @ Q @ UA )
+    # solve Ldot = U1.T @ Q with L0 = St @ UA.T for one step tau
+    L1  = St @ UA.T + tau*( U1.T @ Q )
+    # update S
+    S1  = L1 @ U1
+   
+    return U1, S1
