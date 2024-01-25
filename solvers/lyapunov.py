@@ -963,9 +963,12 @@ def kpik_gmres(A,B,M,k_max,tol,tolY,stol):
     
     return Z, err2, k_eff, etime, nmatvec
 
-def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk):
+def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk,verb=0):
     
-    print('\nLow-rank operator-splitting method for Differential Lyapunov equations.\n')
+    if verb > 0:
+        print('\nLow-rank operator-splitting method for Differential Lyapunov equations.\n')
+    else:
+        print(f'LR_OSI {rk_type} = {rk}.')
     
     eps = 1e-12
     n = X0.shape[0]
@@ -975,12 +978,14 @@ def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk):
     # check rank of inhomogeneity
     Uq,Sq,_ = svd(Q)
     rkq = sum(Sq > eps)
-    print(f'Numerical rank of inhomogeneity B  ({n:d}x{n:d}): {rkq:3d} (tol={eps:.2e})')
+    if verb > 0:
+        print(f'Numerical rank of inhomogeneity B  ({n:d}x{n:d}): {rkq:3d} (tol={eps:.2e})')
     
     # check rank of initial data
     U,S,_ = svd(X0)
     rk0 = sum(S > eps)
-    print(f'Numerical rank of initial data  X0 ({n:d}x{n:d}): {rk0:3d} (tol={eps:.2e})')
+    if verb > 0:
+        print(f'Numerical rank of initial data  X0 ({n:d}x{n:d}): {rk0:3d} (tol={eps:.2e})')
     
     if isinstance(rk,str) and rk_type == 'sigma_tol':
         if rk < eps:
@@ -989,13 +994,17 @@ def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk):
             stol = rk
         S0   = np.diag(S[S > stol])
         rk   = len(S)
-        print(f'\nMode sigma_tol:    stol = {stol:.2e}')
-        print(f'  Required rank of the initial data: {rk:d}\n')   
-    elif isinstance(rk,int) and rk > 0:
+        if verb > 0:
+            print(f'\nMode sigma_tol:    stol = {stol:.2e}')
+            print(f'  Required rank of the initial data: {rk:d}\n')   
+    elif int(rk)==rk and rk > 0:
         stol = eps
-        print('\nMode rank:')
-        print(f'  Chosen rank: {rk:d}\n')
+        if verb > 0:
+            print('\nMode rank:')
+            print(f'  Chosen rank: {rk:d}\n')
         S0 = np.diag(S[:rk])
+    else:
+        raise TypeError
     # pick orthonormal columns
     U0   = U[:,:rk]
     
@@ -1008,18 +1017,21 @@ def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk):
     # precompute matrix exponential
     exptA = expm(dt*A)
     
-    print(f'Begin iteration:   0 --> {Tend:4.2f}      dt = {dt:.5e}')
+    if verb > 0:
+        print(f'Begin iteration:   0 --> {Tend:4.2f}      dt = {dt:.5e}')
     etime = time.time()
     iprint = int(np.floor(nt/10))
     for it in range(nt):
         if it % iprint == 0 or it == nt-1:
-            print(f'  Step {it+1:4d}: t = {tspan[it]:4.2f}')
+            if verb > 0:
+                print(f'  Step {it+1:4d}: t = {tspan[it]:4.2f}')
             X = U0 @ S0 @ U0.T
             res.append(np.linalg.norm(A @ X + X @ A.T + Q)/nQ)
         U1A, S1A = M_ForwardMap(A, U0, S0, dt, exptA)
         U0, S0   = G_ForwardMap(U1A, S1A, Q, dt)
     etime = time.time() - etime
-    print(f'Elapsed time:   {etime:4.2f} seconds.')
+    if verb > 0:
+        print(f'Elapsed time:   {etime:4.2f} seconds.')
     Uout = U0
     Sout = S0
     return Uout, Sout, res
