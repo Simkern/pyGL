@@ -6,7 +6,18 @@ sys.path.append('..')
 
 from git.core.utils import en
 
-def arn(A, b, n, verb = 0):
+def arn(A,B,n, verb = 0):
+    try:
+        p = B.shape[1]
+        if p == 1:
+            Q, H = s_arn(A, B.flatten(), n, verb)
+        else:
+            Q, H = block_arn(A, B, n, verb)
+    except:
+        Q, H = s_arn(A, B, n, verb)
+    return Q, H
+
+def s_arn(A, b, n, verb = 0):
     eps = 1e-12
     H = np.zeros((n + 1, n), dtype=A.dtype)
     Q = np.zeros((A.shape[0], n + 1), dtype=A.dtype)
@@ -21,7 +32,7 @@ def arn(A, b, n, verb = 0):
             # compute projection
             H[i,k] = np.dot(Q[:,i].conj() , v)
             # project out direction
-            v += - H[i,k] * Q[:,i]
+            v -= H[i,k] * Q[:,i]
         # normalize
         beta = en(v)
         H[k+1, k] = beta
@@ -30,6 +41,31 @@ def arn(A, b, n, verb = 0):
             Q[:, k+1] = v / beta
         else:
             return Q, H
+    return Q, H
+
+def block_arn(A, B, n, verb = 0):
+    #eps = 1e-12
+    p = B.shape[1]
+    H = np.zeros((p*(n+1), p*n), dtype=A.dtype)
+    Q = np.zeros((A.shape[0], p*(n+1)), dtype=A.dtype)
+    # Ortho-normalize the input matrix
+    Q[:, :p], _ = scipy.linalg.qr(B, mode='economic')  # Use it as the first Krylov basis
+    for k in range(n):
+        if verb > 0:
+            print(f'  {k:3d}')
+        s   = slice(p*k,p*(k+1))
+        sp1 = slice(p*(k+1),p*(k+2))
+        V = A @ Q[:,s]  # Generate a new candidate matrix
+        # for each colum of Q that we have already constructed
+        for l in range(2):      # MGS
+            k_min = max(0, k - n - 1)
+            for ll in range(k_min, k + 1):
+                sl       = slice(p*ll,p*(ll+1))
+                proj     = Q[:,sl].conj().T @ V
+                H[sl,s] += proj
+                V       -= Q[:,sl] @ proj
+        # Ortho-normalize result
+        Q[:,sp1], H[sp1,s] = scipy.linalg.qr(V, mode='economic')
     return Q, H
 
 def arn_inv(A, b, n):

@@ -10,12 +10,16 @@ Summary:
    2. Computation of the eigenvalue spectrum of the linear operator
    3. Optimal initial condition for maximum transient growth via matrix exponentiation and direct-adjoint looping
    4. Arnoldi factorization
+	* (Block) Arnoldi factorisation of a given matrix A
+	* Rational Arnoldi factorisation of A^-1
+	* Efficient computation of the action of the exponential propagator on a matrix using a n step (block) Arnoldi factorisation
    5. Algorithms for the solution of the Lyapunov equation AX + XA' = -BB':
-        a) Low-rank Cholesky-Factor ADI - LRCFADI (real (LU-based), complex (LU-based), real (GMRES-based))
-        b) Krylov plus Inverse-Krylov - K-PIK (real (LU-based), real (GMRES-based))
-        c) Low-rank approximation of differential Lyapunov equations using an operator-splitting-based time integrator (real)
+	* Low-rank Cholesky-Factor ADI - LRCFADI (real (LU-based), complex (LU-based), real (GMRES-based))
+	* Krylov plus Inverse-Krylov - K-PIK (real (LU-based), real (GMRES-based))
+   6. Algorithms for the time-integration of the differential Lyapunov equation dX/dt = AX + XA' + BB'
+	* Low-rank approximation using an operator-splitting-based time integrator (real)
 
-Matrix-free tools for solution of Lyapunov equations
+Matrix-free tools for solution of differential and algebraic Lyapunov equations
 
 Summary:
 1. Implementations of the Low-rank Cholesky-Factor ADI method (LRCFADI) for real matrices (involving only real algebra) for the case of purely real and complex conjugate shifts.
@@ -23,3 +27,4 @@ Summary:
 3. Utils including Gram-Schmidt and Arnoldi factorisations to compute suboptimal shift heuristics
 4. Optimal shift calculation for the case of symmetric system matrices A
 5. Extensions of the solution algorithm to support iterative solutions of the linear systems (GMRES) with or without Laplace-preconditioning.
+6. Operator-splitting integrator for the differential Lyapunov equations with a linear approximation of the non-stiff inhomogeneity (BB') and an analytic (matrix exponential) or approximate (Krylov subspace approxiamtion) solution of the stiff part (AX + XA').
