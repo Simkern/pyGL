@@ -7,9 +7,9 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
-from git.core.CGL_parameters import CGL, CGL2
-from git.core.diff_mat import FDmat
-from git.solvers.lyapunov import LR_OSI
+from core.CGL_parameters import CGL, CGL2
+from core.diff_mat import FDmat
+from solvers.lyapunov import LR_OSI
 
 def rn(X,Xref):
     return np.linalg.norm(X - Xref)/np.linalg.norm(Xref)

@@ -9,9 +9,9 @@ from scipy.linalg import expm, qr
 
 sys.path.append('../core')
 
-from git.solvers.arnoldi import kryl_expm
+from solvers.arnoldi import kryl_expm
 
-from git.core.utils import en, pmat, pvec
+from core.utils import en, pmat, pvec
 
 def check_shifts(p_v):
     

@@ -7,7 +7,7 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
-from git.solvers.lyapunov import LR_OSI
+from solvers.lyapunov import LR_OSI
 
 def rn(X,Xref):
     return np.linalg.norm(X - Xref)/np.linalg.norm(Xref)

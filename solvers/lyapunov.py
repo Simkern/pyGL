@@ -8,7 +8,7 @@ from scipy.linalg import lu_factor, lu_solve, solve, solve_lyapunov, svd, qr, in
 
 sys.path.append('..')
 
-from git.solvers.lyap_utils import residual, M_ForwardMap, G_ForwardMap
+from solvers.lyap_utils import residual, M_ForwardMap, G_ForwardMap
 
 def lrcfadi(A,B,p,stop_criterion,criterion_type,Xref):
     

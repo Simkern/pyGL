@@ -4,7 +4,7 @@ import sys
 
 sys.path.append('..')
 
-from git.core.utils import en
+from core.utils import en
 from scipy import linalg
 
 def arn(A,B,n, verb = 0):
