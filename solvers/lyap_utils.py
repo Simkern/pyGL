@@ -9,9 +9,9 @@ from scipy.linalg import expm, qr
 
 sys.path.append('../core')
 
-from git.solvers.arnoldi import arn
+from git.solvers.arnoldi import kryl_expm
 
-from utils import en
+from git.core.utils import en, pmat, pvec
 
 def check_shifts(p_v):
     
@@ -199,7 +199,7 @@ def M_ForwardMap(A,U,S,tau,exptA=None,nkryl=None):
 
     Parameters
     ----------
-    A : np.array
+    A : np.arraypmat(U, 'U0')
         System matrix.
     U : np.array
         Low-rank basis of initial data U(t).
@@ -230,8 +230,8 @@ def M_ForwardMap(A,U,S,tau,exptA=None,nkryl=None):
             U1 = kryl_expm(A,U,nkryl,tau)
     else:
         U1     = exptA @ U
-    UA, R = qr(U1,mode='economic')
-    SA    = R @ S @ R.T
+    UA, R, P = qr(U1,mode='economic', pivoting=True)
+    SA       = R @ S @ R.T
     
     return UA, SA
 
@@ -263,51 +263,20 @@ def G_ForwardMap(UA, SA, Q, tau):
     SA : np.array
         Composed solution S(t + tau) of the Lyapunov equation
     """
-    
-    # solve Kdot = Q @ U1A with K0 = UA @ SA for one step tau
+
+    # solve Kdot = Q @ UA with K0 = UA @ SA for one step tau
     K1 = UA @ SA + tau*(Q @ UA)
+    
     # orthonormalise K1
     U1, Sh = qr(K1,mode='economic')
+    
     # solve Sdot = - U1.T @ Q @ UA with S0 = Sh for one step tau
     St = Sh - tau*( U1.T @ Q @ UA )
+    
     # solve Ldot = U1.T @ Q with L0 = St @ UA.T for one step tau
     L1  = St @ UA.T + tau*( U1.T @ Q )
+    
     # update S
     S1  = L1 @ U1
    
     return U1, S1
-
-def kryl_expm(A,B,nkryl,dt=1.0):
-    """
-    Efficient computation of the action of the exponential propagator of A 
-    over a time interval dt on a matrix B using the block arnoldi factorisation
-    
-    X = expm(dt*A) @ B
-
-    Parameters
-    ----------
-    A : np.array (n x n)
-        System matrix to be exponentiated
-    B : np.array (n x p)    p << n
-        Matrix to be propagated
-    nkryl : int
-        Number of steps in the block arnoldi factorisation
-        NB: the block arnoldi factorisation is of size p*nkryl x p*nkryl
-    dt : float (default is 1.0)
-        Time interval for the exponential propagator
-
-    Returns
-    -------
-    np.array (n x p)
-        Best approximation of X = expm(dt*A) @ B in the Krylov subspace 
-        K(A,B,nkryl)
-
-    """
-    try:
-        rk = B.shape[1]
-    except:
-        rk = 1
-    Qb,Rb = linalg.qr(B,mode='economic')
-    Q, H = arn(A,Qb,nkryl)
-    p = rk*nkryl
-    return (Q[:,:p] @ linalg.expm(dt*H[:p,:p])[:,:rk]) @ Rb

@@ -1,1 +1,10 @@
-**/__pycache__
+# local folders
+local_tests/
+conda_setup/
+
+# python
+__pycache__
+.spyproject
+
+# swap files
+.*~

@@ -5,6 +5,7 @@ import sys
 sys.path.append('..')
 
 from git.core.utils import en
+from scipy import linalg
 
 def arn(A,B,n, verb = 0):
     try:
@@ -129,3 +130,59 @@ def DCGS(Q,w,k):
     beta = en(z)
     proj = proj[1:k]
     return proj,beta,z
+
+def kryl_expm(A,B,nkryl,dt=1.0,rho=None):
+    """
+    Efficient computation of the action of the exponential propagator of A 
+    over a time interval dt on a matrix B using the block arnoldi factorisation
+    
+    X = expm(dt*A) @ B
+
+    Parameters
+    ----------
+    A : np.array (n x n)
+        System matrix to be exponentiated
+    B : np.array (n x p)    p << n
+        Matrix to be propagated
+    nkryl : int
+        Number of steps in the block arnoldi factorisation
+        NB: the block arnoldi factorisation is of size p*nkryl x p*nkryl
+    dt : float (default is 1.0)
+        Time interval for the exponential propagator
+
+    Returns
+    -------
+    np.array (n x p)
+        Best approximation of X = expm(dt*A) @ B in the Krylov subspace 
+        K(A,B,nkryl)
+
+    """
+    try:
+        rk = B.shape[1]
+    except:
+        rk = 1
+    Qb,Rb = linalg.qr(B,mode='economic')
+    Q_, H_ = arn(A,Qb,nkryl)
+        
+    kp  = rk*nkryl
+    kpm = kp - rk
+    kpp = kp + rk
+    H   = H_[:kp,:kp]
+
+    
+    e1 = np.zeros((kp,rk))
+    e1[:rk,:rk] = np.eye(rk)
+    
+    em = np.zeros((kp,rk))
+    em[kpm:kp,:rk] = np.eye(rk)
+    hemT = H_[kp:kpp,kpm:kp] @ em.T
+    
+    Hmh = np.block([[ H,    np.zeros((kp,rk)) ],
+                    [ hemT, np.zeros((rk,rk)) ]])
+                    
+    expH = linalg.expm(dt*Hmh)
+    
+    y    = expH[:kpp,:rk] @ Rb
+    x    = Q_ @ y
+    
+    return  x
