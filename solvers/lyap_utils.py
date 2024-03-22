@@ -230,7 +230,8 @@ def M_ForwardMap(A,U,S,tau,exptA=None,nkryl=None):
             U1 = kryl_expm(A,U,nkryl,tau)
     else:
         U1     = exptA @ U
-    UA, R = qr(U1, mode='economic')
+    UA, R, p = qr(U1, mode='economic', pivoting = True)
+    R = R[:,np.argsort(p)]
     SA    = R @ S @ R.T
     
     return UA, SA
