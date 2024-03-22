@@ -168,10 +168,6 @@ def kryl_expm(A,B,nkryl,dt=1.0,rho=None):
     kpm = kp - rk
     kpp = kp + rk
     H   = H_[:kp,:kp]
-
-    
-    e1 = np.zeros((kp,rk))
-    e1[:rk,:rk] = np.eye(rk)
     
     em = np.zeros((kp,rk))
     em[kpm:kp,:rk] = np.eye(rk)

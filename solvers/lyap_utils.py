@@ -230,8 +230,8 @@ def M_ForwardMap(A,U,S,tau,exptA=None,nkryl=None):
             U1 = kryl_expm(A,U,nkryl,tau)
     else:
         U1     = exptA @ U
-    UA, R, P = qr(U1,mode='economic', pivoting=True)
-    SA       = R @ S @ R.T
+    UA, R = qr(U1, mode='economic')
+    SA    = R @ S @ R.T
     
     return UA, SA
 
@@ -268,7 +268,7 @@ def G_ForwardMap(UA, SA, Q, tau):
     K1 = UA @ SA + tau*(Q @ UA)
     
     # orthonormalise K1
-    U1, Sh = qr(K1,mode='economic')
+    U1, Sh = qr(K1, mode='economic')
     
     # solve Sdot = - U1.T @ Q @ UA with S0 = Sh for one step tau
     St = Sh - tau*( U1.T @ Q @ UA )
