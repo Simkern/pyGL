@@ -963,76 +963,43 @@ def kpik_gmres(A,B,M,k_max,tol,tolY,stol):
     
     return Z, err2, k_eff, etime, nmatvec
 
-def LR_OSI(A,B,X0,Tend,dtaim,rk_type,rk,verb=0):
+def LR_OSI(U0, S0, A, Q, Tend, dtaim, torder=1, verb=0):
     
     if verb > 0:
         print('\nLow-rank operator-splitting method for Differential Lyapunov equations.\n')
-    else:
-        print(f'LR_OSI {rk_type} = {rk}.')
-    
-    eps = 1e-12
-    n = X0.shape[0]
-    # generate inhomogeneity
-    Q = B @ B.T
-    nQ = np.linalg.norm(Q)
-    # check rank of inhomogeneity
-    Uq,Sq,_ = svd(Q)
-    rkq = sum(Sq > eps)
-    if verb > 0:
-        print(f'Numerical rank of inhomogeneity B  ({n:d}x{n:d}): {rkq:3d} (tol={eps:.2e})')
-    
-    # check rank of initial data
-    U,S,_ = svd(X0)
-    rk0 = sum(S > eps)
-    if verb > 0:
-        print(f'Numerical rank of initial data  X0 ({n:d}x{n:d}): {rk0:3d} (tol={eps:.2e})')
-    
-    if isinstance(rk,str) and rk_type == 'sigma_tol':
-        if rk < eps:
-            stol = eps
-        else:
-            stol = rk
-        S0   = np.diag(S[S > stol])
-        rk   = len(S)
-        if verb > 0:
-            print(f'\nMode sigma_tol:    stol = {stol:.2e}')
-            print(f'  Required rank of the initial data: {rk:d}\n')   
-    elif int(rk)==rk and rk > 0:
-        stol = eps
-        if verb > 0:
-            print('\nMode rank:')
-            print(f'  Chosen rank: {rk:d}\n')
-        S0 = np.diag(S[:rk])
-    else:
-        raise TypeError
-    # pick orthonormal columns
-    U0   = U[:,:rk]
-    
-    res = []
     
     nt    = int(np.ceil(Tend/dtaim))
     dt    = Tend/nt
     tspan = np.linspace(0, Tend, num=nt, endpoint=True)
     
-    # precompute matrix exponential
-    exptA = expm(dt*A)
+    if torder == 1:
+        exptA = expm(dt*A)
+    else:
+        exptA = expm(dt/2*A)
     
-    if verb > 0:
-        print(f'Begin iteration:   0 --> {Tend:4.2f}      dt = {dt:.5e}')
     etime = time.time()
-    iprint = int(np.floor(nt/10))
+    iprint = max(1,int(np.floor(nt/10)))
     for it in range(nt):
-        if it % iprint == 0 or it == nt-1:
-            if verb > 0:
-                print(f'  Step {it+1:4d}: t = {tspan[it]:4.2f}')
-            X = U0 @ S0 @ U0.T
-            res.append(np.linalg.norm(A @ X + X @ A.T + Q)/nQ)
+        if (it % iprint == 0 or it == nt-1) and verb > 0:
+            print(f'  Step {it+1:4d}: t = {tspan[it]:4.2f}')
+        U0, S0 = LR_OSI_step(U0, S0, A, Q, dt, exptA, torder, verb)
+    if verb > 0:
+        print(f'Elapsed time:   {time.time()-etime:4.2f} seconds.')
+
+    return U0, S0
+
+def LR_OSI_step(U0, S0, A, Q, dt, exptA, torder=1, verb=0):
+    
+    etime = time.time()
+    if torder == 1:
         U1A, S1A = M_ForwardMap(A, U0, S0, dt, exptA)
-        U0, S0   = G_ForwardMap(U1A, S1A, Q, dt)
+        U1, S1   = G_ForwardMap(U1A, S1A, Q, dt)
+    elif torder == 2:
+        U1A, S1A = M_ForwardMap(A, U0, S0, dt/2, exptA)
+        U2, S2   = G_ForwardMap(U1A, S1A, Q, dt)
+        U1, S1   = M_ForwardMap(A, U2, S2, dt/2, exptA)
     etime = time.time() - etime
     if verb > 0:
         print(f'Elapsed time:   {etime:4.2f} seconds.')
-    Uout = U0
-    Sout = S0
-    return Uout, Sout, res
+    return U1, S1
     
