@@ -8,3 +8,6 @@ __pycache__
 
 # swap files
 .*~
+
+# npy
+*npy
