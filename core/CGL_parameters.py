@@ -1,9 +1,9 @@
 import numpy as np
 
-def CGL(mu0,cu = 0.1, cd = -1, U = 2, verb = False):
+def CGL(mu0,cu = 0.2, cd = -1, U = 2, verb = False):
 
     mu    = mu0 - cu**2
-    nu    = U + 2*1j*cu
+    nu    = U + 1j*cu
     gamma = 1.0 + 1j*cd
 
     Umax  = U + 2*cu*cd
