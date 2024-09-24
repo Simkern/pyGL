@@ -10,7 +10,7 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
-from solvers.lyapunov import LR_OSI
+from solvers.lyapunov_ProjectorSplittingIntegrator import LR_OSI_base as LR_OSI
 from core.utils import p
 
 def rn(X,Xref):
@@ -27,7 +27,7 @@ def Xdot(t,Xv,A,Q):
 plt.close("all")
 
 eps = 1e-12
-n  = 4
+n  = 10
 I  = np.eye(n)
 h  = 1/n**2
 At = np.diag(-2/h*np.ones((n,)),0) + \
@@ -149,7 +149,7 @@ tol = 1e-12
 Xrk = np.squeeze(Xrkv[:,:,tolv==tol,Tv==Tend])
 Urk_svd,Srk_svd,Vrk_svdh = linalg.svd(Xrk, full_matrices=False)
 
-rkv = [2, 8, 14]
+rkv = [2, 8, 14, 20, 30]
 #rkv = np.arange(2,18+1,4)
 tauv = np.logspace(-1, -5, 5)
 tord = [ 1, 2 ]
@@ -172,7 +172,7 @@ for it, torder in enumerate(tord):
             edlra[    i,j,it] = rn(X,Xrk)
             print(f'\tdt={dt:.0e}:  etime = {tm()-etime:5.2f}   rel error: {rn(X,Xrk):.4e}')
 
-fig, axs = plt.subplots(1,2)
+fig, axs = plt.subplots(1,3)
 for i, rk in enumerate(rkv):
     axs[0].loglog(tauv,edlra[i,:,0],label=f'rk={rk:d}, torder=1',marker='o')
 
@@ -192,6 +192,11 @@ axs[1].scatter(np.arange(N)+1,Srk_svd,
                s=20,
                color='r',
                label='S_rk')
+axs[1].set_xlim(0,20)
+axs[1].set_ylim(1e-7,100)
+axs[1].set_yticks([ 10**i for i in range(-4,2,2)])
+axs[1].set_yscale('log')
+axs[1].legend()
 
 for i, rk in enumerate(rkv):
     it = 3

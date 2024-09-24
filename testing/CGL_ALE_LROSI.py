@@ -16,25 +16,23 @@ def rn(X,Xref):
 
 plt.close("all")
 
-# Parameters
-x0 = -10                      # beginning of spatial domain
-x1 = 10                       # end of spatial domain
-dx = 0.1                      # Spatial discretisation
 
-# Discretisation grids
-L  = x1-x0                      # spatial domain size
-Nxc = int(L / dx)                # number of spatial dof
-xvec = np.linspace(x0, x1, Nxc)     # spatial grid
+# Parameters
+L  = 50
+x0 = -L/2                      # beginning of spatial domain
+x1 = L/2                       # end of spatial domain
+Nxc = 128
+xvec = np.linspace(x0, x1, Nxc+2)
 
 # Parameters of the complex Ginzburg-Landau equation
 # basic
 U   = 2              # convection speed
-cu  = 0.1
+cu  = 0.2
 cd  = -1
 mu0 = 0.38
 mu2 = -0.01
 
-mu_scal,__,__,__,__ = CGL(mu0,cu,cd,U)
+mu_scal,__,__,__,__   = CGL(mu0,cu,cd,U)
 mu,nu,gamma,Umax,mu_t = CGL2(xvec,mu0,cu,cd,U,mu2,True)
 x12 = np.sqrt(-2*mu_scal/mu2)
 
@@ -72,7 +70,7 @@ def Xdot(t,Xv,A,Q):
     return dXdt.flatten()
 
 # compare RK45 to LR_OSI
-Tend = 0.1
+Tend = 0.01
 tspan = (0,Tend)
 tol = 1e-12
 sol = solve_ivp(Xdot,tspan,X0.flatten(),args=(A,Q), atol=tol, rtol=tol)
@@ -80,7 +78,12 @@ Xrk = sol.y[:,-1].reshape(A.shape)
 Urk,Srk,Vrkh = linalg.svd(Xrk)
 
 rkv = [ 5,10,15,20 ]
-tauv = np.logspace(-2, -5, 10)
+tauv = np.logspace(-2, -4, 3)
+
+for i, tau in enumerate(tauv):
+    print(f"Tend/tau {Tend/tau}")
+
+sys.exit()
 
 fig = plt.figure(2)
 sv = []

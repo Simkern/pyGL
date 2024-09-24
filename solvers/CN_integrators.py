@@ -32,6 +32,28 @@ def CN_L_integrate(xvec,tvec,mu,nu,gamma,q0):
         
     return q
 
+def CN_Lf_integrate(xvec,tvec,mu,nu,gamma,q0,f):
+    
+    Nt = len(tvec)
+    Nx = len(xvec)
+    dt = np.diff(tvec)[0]
+    
+    DM1f,__,DM2c = FDmat(xvec)
+
+    if len(mu) == 1:
+        print('expand mu')
+        mu = np.ones((Nx,))*mu    # if mu is scalar
+
+    L = sp.lil_matrix(np.diag(mu) - nu*DM1f + gamma*DM2c)
+    
+    q   = np.zeros((Nx,Nt), dtype=complex)
+    q[:,0] = q0
+    
+    for it in range(Nt-1):
+        q[:,it+1] = CN_Lf_advance(q[:,it],L,f[:,it]/2,f[:,it]/2,dt)
+        
+    return q
+
 def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT):
     
     Nt = len(tvec)
@@ -51,6 +73,28 @@ def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT):
     
     for it in reversed(range(Nt-1)):
         psi[:,it] = CN_L_adj_advance(psi[:,it+1],LH,dt)
+        
+    return psi
+
+def CN_Lf_adj_integrate(xvec,tvec,mu,nu,gamma,psiT,f):
+    
+    Nt = len(tvec)
+    Nx = len(xvec)
+    dt = np.diff(tvec)[0]
+    
+    __,DM1b,DM2c = FDmat(xvec)
+
+    if len(mu) == 1:
+        mu = np.ones((Nx,))*mu    # if mu is scalar
+
+    LH = sp.lil_matrix(np.diag(mu) - nu*DM1b + gamma*DM2c).H
+    
+    psi = np.zeros((Nx,Nt), dtype=complex)
+    
+    psi[:,-1] = psiT
+    
+    for it in reversed(range(Nt-1)):
+        psi[:,it] = CN_Lf_adj_advance(psi[:,it+1],LH,f[:,it]/2,f[:,it]/2,dt)
         
     return psi
 
