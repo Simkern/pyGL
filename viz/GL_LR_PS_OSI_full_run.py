@@ -27,7 +27,7 @@ plt.close("all")
 
 make_real = True
 if_save = True
-fldr = 'data_r'
+fldr = 'data'
 
 # Parameters
 L0  = 50
@@ -175,11 +175,12 @@ else:
     Xrkv = data['Xrkv']
     erel = data['rel_error_Xref']
     Tv   = data['Tv']
-    nrmX = []
-    sref = np.zeros((Nrep+1,Nx))
-    for i in range(Nrep+1):
-        nrmX.append(np.linalg.norm(Xrkv[:,:,0,i]))
-        _, sref[i,:], _ = np.linalg.svd(Xrkv[:,:,0,i])
+    
+nrmX = []
+sref = np.zeros((Nrep+1,Nx))
+for i in range(Nrep+1):
+    nrmX.append(np.linalg.norm(Xrkv[:,:,0,i]))
+    _, sref[i,:], _ = np.linalg.svd(Xrkv[:,:,0,i])
         
 fig, ax = plt.subplots(1,2)
 ax[0].plot(np.linspace(0, Trk*Nrep+1, len(nrmX)), nrmX)

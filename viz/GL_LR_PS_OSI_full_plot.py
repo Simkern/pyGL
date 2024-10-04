@@ -36,7 +36,7 @@ plt.close("all")
 
 make_real = True
 if_save = True
-fldr = 'data_r'
+fldr = 'data'
 
 # Parameters
 L0  = 50
@@ -131,7 +131,7 @@ _, srf, _ = np.linalg.svd(Xref)
 
 # parameters
 TOv = [1, 2]
-rkv = [ 4, 8, 20, 40 ]
+rkv = [ 4, 8, 20, 40, 60 ]
 tauv = np.logspace(0, -3, 7)
 Tend = 50
 
