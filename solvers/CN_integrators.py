@@ -65,7 +65,7 @@ def CN_L_adj_integrate(xvec,tvec,mu,nu,gamma,psiT):
     if len(mu) == 1:
         mu = np.ones((Nx,))*mu    # if mu is scalar
 
-    LH = sp.lil_matrix(np.diag(mu) - nu*DM1b + gamma*DM2c).H
+    LH = sp.lil_matrix(np.diag(mu) - nu*DM1b + gamma*DM2c).conj().transpose()
     
     psi = np.zeros((Nx,Nt), dtype=complex)
     
@@ -87,7 +87,7 @@ def CN_Lf_adj_integrate(xvec,tvec,mu,nu,gamma,psiT,f):
     if len(mu) == 1:
         mu = np.ones((Nx,))*mu    # if mu is scalar
 
-    LH = sp.lil_matrix(np.diag(mu) - nu*DM1b + gamma*DM2c).H
+    LH = sp.lil_matrix(np.diag(mu) - nu*DM1b + gamma*DM2c).conj().transpose()
     
     psi = np.zeros((Nx,Nt), dtype=complex)
     
