@@ -83,6 +83,8 @@ if make_real:
     Cr = np.real(C[:,1:-1])
     Ci = np.imag(C[:,:1:-1])
     C = np.block([[Cr, -Ci], [Ci, Cr]])
+    rkb *= 2
+    rkc *= 2
     # plotting preparation
     xp = np.hstack((xc[1:-1],xc[1:-1] + L0))
     px, py = np.meshgrid(xp, xp)
@@ -99,48 +101,30 @@ else:
     px, py = np.meshgrid(x, x)
 
 # weight matrix for convenience
-W    = np.diag(w)
+W = np.diag(w)
 Winv = np.diag(1/w)
 
 box = x12*np.array([[1,1,-1,-1,1],[1,-1,-1,1,1]])
 dot = np.array([[x_b, x_c]])
 
-# compute controllability gramian
+# define state energy and control energy matrices
+qfac = 1.0
+rfac = 1.0
+Q = qfac*C.T @ C @ Winv
+R = rfac*np.eye(rkb)
 
-# direct
-Qc = B @ B. T @ W
-X = linalg.solve_continuous_lyapunov(L, -Qc)
-
-Qo = C.T @ C @ Winv
-Y = linalg.solve_continuous_lyapunov(L.T, -Qo)
+# Riccati equation
+P = linalg.solve_continuous_are(L, B, Q, R)
 
 fig1, ax1 = plt.subplots(1,1)
-p = ax1.contourf(px, py, Qc, 100)
-#fig1.colorbar(p, ax = ax1)
-#ax1.set_title('B @ B.T')
-
-fig2, ax2 = plt.subplots(1,1)
-p = ax2.contourf(px, py, Qo, 100)
-#fig2.colorbar(p, ax = ax2)
-#ax2.set_title('C.T @ C')
-
-fig3, ax3 = plt.subplots(1,1)
-p = ax3.contourf(px, py, X, 100, cmap='RdBu_r')
+p = ax1.contourf(px, py, P, 100, cmap='RdBu_r')
 #fig3.colorbar(p, ax = ax3)
 #ax3.set_title('Controllability Gramian')
 
-fig4, ax4 = plt.subplots(1,1)
-p = ax4.contourf(px, py, Y, 100, cmap='RdBu_r')
-#fig4.colorbar(p, ax = ax4)
-#ax4.set_title('Observability Gramian')
-
 fig5, ax5 = plt.subplots(1,1)
-ax5.scatter(range(1,Nx+1), linalg.svd(X, compute_uv=False), 50, 'k', marker='+', label='exact')
+ax5.scatter(range(1,Nx+1), linalg.svd(P, compute_uv=False), 50, 'k', marker='+', label='exact')
 
-fig6, ax6 = plt.subplots(1,1)
-ax6.scatter(range(1,Nx+1), linalg.svd(Y, compute_uv=False), 50, 'k', marker='+', label='exact')
-
-for ax in [ax5, ax6]:
+for ax in [ax5]:
     ax.set_yscale('log')
     ax.set_ylim(1e-12, 1e3)
     ax.set_xlim(0,60)
@@ -149,7 +133,7 @@ for ax in [ax5, ax6]:
     #ax.set_aspect(3)
     ax.legend()
 
-for ax in [ax1, ax2, ax3, ax4]:
+for ax in [ax1]:
     ax.axis('equal') 
     ax.plot(box[0,:],box[1,:],'w--')
     if make_real:
@@ -160,17 +144,11 @@ for ax in [ax1, ax2, ax3, ax4]:
     ax.set_ylim(min(xp), max(xp))
     ax.axis('off')
     #ax.set_ylim(ax.get_ylim()[::-1])    
-for fig in [ fig5, fig6 ]:
+for fig in [ fig5 ]:
     fig.set_figheight(5)
     fig.set_figwidth(4)
-# superimpose BBT and CTC
-ax3.scatter(x_b, x_b, 80, 'r', edgecolors='k', linewidths=2)
-ax4.scatter(x_c, x_c, 80, 'b', edgecolors='k', linewidths=2)
-if make_real:
-    ax3.scatter(x_b + L0, x_b + L0, 80, 'r', edgecolors='k', linewidths=2)
-    ax4.scatter(x_c + L0, x_c + L0, 80, 'b', edgecolors='k', linewidths=2)
     
-
+sys.exit()
 if if_save:
     names = ['BBT',
              'CTC',

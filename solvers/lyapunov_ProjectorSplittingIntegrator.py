@@ -340,17 +340,17 @@ def LR_OSI_rk_base(U0, S0, A, Q,Tend, dtaim, torder=1, verb=0, tol=1e-6):
 def LR_OSI_rk_step(U, S, A, Q, dt, exptA, torder, rk_red_lock, verb=0, rkmin=2, max_step=5, tol=1e-6):
     accept_step = False
     istep = 0 
-    #print(f'rk init: {U.shape[1]}')
+    print(f'   rk init: {U.shape[1]}')
     while (not accept_step and istep < max_step):
         istep += 1
         n, rk = U.shape
         # regular step
         U, S = LR_OSI_step(U, S, A, Q, dt, exptA, torder, verb)
         _,svals,_ = svd(S)
-        #print(svals)
+        print(svals)
         if svals[-1] > tol:
             # increase rank
-            #print(f'{rk+1}')
+            print(f'{rk+1}')
             U, S = increase_rank(U, S)
             # avoid oscillations
             rk_red_lock = 10                
@@ -365,9 +365,9 @@ def LR_OSI_rk_step(U, S, A, Q, dt, exptA, torder, rk_red_lock, verb=0, rkmin=2, 
                 if rknew >= rkmin:
                     S = S[:rknew,:rknew]
                     U = U[:, :rknew]
-                    #print(f'New rank: {rknew-1:%d}')
+                    print(f'New rank: {rknew-1}')
                 else:
-                    #print('cannot reduce')
+                    print('cannot reduce')
                     pass     
     if rk_red_lock > 0:
         rk_red_lock -= 1
