@@ -21,7 +21,7 @@ plt.rcParams.update(params)
 plt.close("all")
 
 make_real = True
-if_save = True
+if_save = False
 
 # Parameters
 L0  = 50
@@ -39,7 +39,7 @@ mu0 = 0.38
 mu2 = -0.01
 
 mu_scal,__,__,__,__   = CGL(mu0,cu,cd,U)
-mu,nu,gamma,Umax,mu_t = CGL2(xc,mu0,cu,cd,U,mu2,True)
+mu,nu,gamma,Umax,mu_t = CGL2(xc,mu0,cu,cd,U,mu2,False)
 x12 = np.sqrt(-2*mu_scal/mu2)
 
 # input and output parameters
@@ -57,8 +57,8 @@ DM1f,DM1b,DM2c = FDmat(xc)
 # integration weights
 dx = np.diff(xc)
 wc = np.zeros(Nxc+2)
-wc[:Nxc+1] += dx
-wc[1:]     += dx
+#wc[:Nxc+1] += dx
+#wc[1:]     += dx
 
 # linear operator
 Lc = np.asarray(np.diag(mu) - nu*DM1f + gamma*DM2c)

@@ -281,3 +281,38 @@ def G_ForwardMap(UA, SA, Q, tau):
     S1  = L1 @ U1
    
     return U1, S1
+
+def idx_first_below(vals, tol):
+    rk = len(vals)
+    for idx, val in enumerate(vals):
+        if val < tol:
+            return idx
+        else:
+            idx = rk
+    return idx
+
+def setup_IC(U0, S0, rk):
+    n, rk0 = U0.shape
+    if rk <= rk0:
+        U = U0[:,:rk].copy()
+        S = S0[:rk,:rk].copy()
+    else:
+        U = U0.copy()
+        S = S0.copy()
+        for i in range(rk0,rk):
+            U, S = increase_rank(U, S)
+    return U, S
+
+def increase_rank(U0, S0):
+    n, rk = U0.shape
+    # generate new random vector ...
+    Unew = np.random.random_sample((n,1))
+    # that is orthogonal to the exisiting basis ...
+    Unew -= U0 @ U0.T @ Unew
+    # and of unit length ...
+    Unew /= np.linalg.norm(Unew)
+    # and add it to the basis
+    U = np.block([U0, Unew])
+    # add zeros to coefficient matrix
+    S = np.block([[ S0, np.zeros((rk,1))],[np.zeros((1,rk)), 0.0]])
+    return U, S

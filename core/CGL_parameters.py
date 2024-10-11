@@ -25,7 +25,7 @@ def CGL(mu0,cu = 0.2, cd = -1, U = 2, verb = False):
 
 def CGL2(x, mu0, cu = 0.1, cd = -1, U = 2, mu2 = -0.01, verb = False):
 
-    mu_scal,nu,gamma,Umax,mu_t = CGL(mu0,cu,cd,U)
+    mu_scal,nu,gamma,Umax,mu_t = CGL(mu0,cu,cd,U,verb)
 
     mu = mu_scal*np.ones(x.shape) + mu2*x**2/2
 
