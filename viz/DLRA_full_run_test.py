@@ -10,6 +10,8 @@ from matplotlib import pyplot as plt
 
 from core.CGL_parameters import CGL, CGL2
 from core.diff_mat import FDmat
+
+from solvers.lyap_utils import CALE
 from solvers.lyapunov_ProjectorSplittingIntegrator import LR_OSI_test
 
 # naive Runge-Kutta time integration
@@ -118,20 +120,21 @@ Yref = linalg.solve_continuous_lyapunov(L.T, -Qo)
 nQ    = np.linalg.norm(Qc)
 nA    = np.linalg.norm(L)
 
-filename = f'X0_CGL_Nx{Nx:02d}_rk_X0_{rk_X0:02d}.npz'
-fname = os.path.join(fldr,filename)
-if not os.path.isfile(fname):
+filenameU = f'CGL_Nx{Nx:02d}_U0_rk_X0_{rk_X0:02d}.npy'
+filenameS = f'CGL_Nx{Nx:02d}_S0_rk_X0_{rk_X0:02d}.npy'
+fnameU = os.path.join(fldr,filenameU)
+fnameS = os.path.join(fldr,filenameS)
+if not os.path.isfile(fnameU):
     s0    = np.random.random_sample((rk_X0,))
     U0, _ = linalg.qr(np.random.random_sample((Nx, rk_X0)),mode='economic')
     S0    = np.diag(sorted(s0)[::-1]);
-    X0    = U0 @ S0 @ U0.T
-    np.savez(fname, X0=X0, S0=S0, U0=U0)
+    np.save(fnameU, U0)
+    np.save(fnameS, S0)
 else:
-    data = np.load(fname)
-    X0   = data['X0']
-    S0   = data['S0']
-    U0   = data['U0']
+    U0 = np.load(fnameU)
+    S0 = np.load(fnameS)
     
+X0    = U0 @ S0 @ U0.T
 U0_svd,S0_svd,V0_svdh = linalg.svd(X0, full_matrices=False)
 
 # compare RK45 to LR_OSI
@@ -174,60 +177,55 @@ sref = np.zeros((Nrep+1,Nx))
 for i in range(Nrep+1):
     nrmX.append(np.linalg.norm(Xrkv[:,:,0,i]))
     _, sref[i,:], _ = np.linalg.svd(Xrkv[:,:,0,i])
-        
-fig, ax = plt.subplots(1,2)
-ax[0].plot(np.linspace(0, Trk*Nrep+1, len(nrmX)), nrmX)
-ax[1].semilogy(np.linspace(0, Trk*Nrep+1, len(nrmX)), erel[0,:])
-
+  
 rkv = [ 4, 20 ] #[ 4, 8, 20, 40, 60]
-tauv = [ 0.001 ] #np.logspace(0, -3, 7)
-
-fig1, ax1 = plt.subplots(1,2)
-p = ax1[0].contourf(px, py, Xref, 100)
-fig1.colorbar(p, ax = ax1[0])
-ax1[0].set_title('Controllability')
-
-p = ax1[1].contourf(px, py, Yref, 100)
-fig1.colorbar(p, ax = ax1[1])
-ax1[1].set_title('Observability')
+tauv = np.logspace(0, -3, 4)
 
 # compare RK45 to LR_OSI
-TOv = [1] #[1, 2]
-Tend = 80
+ifexpm = True
+TOv = [1, 2]
+Tend = 1
 tspan = (0,Tend)
 tol = 1e-12
 Xrk = np.squeeze(Xrkv[:,:,tolv==tol,Tv==Tend])
 Urk_svd,Srk_svd,Vrk_svdh = linalg.svd(Xrk, full_matrices=False)
 errRK = rn(Xrk, Xref)
-print(f'Tend = {Tend:6.2f}, RK error = {errRK:4e}')
+print(f'T0   = {0.0:6.2f}, RK error = {rn(X0, Xref):4e}, res_0  = {CALE(X0,L,Qc):4e}')
+print(f'Tend = {Tend:6.2f}, RK error = {errRK:4e}, res_RK = {CALE(Xrk,L,Qc):4e}')
+print(f'|X_RK|/N = {np.linalg.norm(Xrk)/Nx:4e}')
+
+print('\nInitial condition: X0')
+print(f'    |res| = {CALE(X0,L,Qc):4e}')
+print('    SVD = ',' '.join(f'{x:2e}' for x in linalg.svdvals(X0)[:10]))
 
 fig, axs = plt.subplots(len(rkv),2)
 erk = np.zeros((len(TOv), len(rkv), len(tauv)))
 erf = np.zeros((len(TOv), len(rkv), len(tauv)))
 nrm = np.zeros((len(TOv), len(rkv), len(tauv)))
-for it, torder in enumerate(TOv):
-    for i, rk in enumerate(rkv):
+for i, rk in enumerate(rkv):
+    for it, torder in enumerate(TOv):
         print(f'LR OSI: rk = {rk:2d}, torder={torder:1d}')
         for j, tau in enumerate(tauv):
-            print(f' dt={tau:.0e}:')
+            #print(f' dt={tau:.0e}:')
             filename = f'Xdlra_CGL_Nx{Nxc:02d}_rk0_{rk_X0:02d}_rk_{rk:02d}_dt{tau:.2e}_TO{torder:1d}_T_{Tend:.2e}.npz'
             fname = os.path.join(fldr,filename)
             if not os.path.isfile(fname):
                 etime = tm()
-                nt = int(np.ceil(Tend/tau))
+                nt = int(np.floor(Tend/tau))
                 X00 = copy.deepcopy(X0)
-                U, S, svals, res_rk, res_rf = LR_OSI_test(L, Qc, X0, Xrk, Xref, Tend, tau, rk, torder=torder, verb=1)
+                U, S, svals, res_rk, res_rf = LR_OSI_test(L, Qc, X0, Xrk, Xref, Tend, tau, rk, torder=torder, verb=0, ifexpm=ifexpm)
+                #print(f'size: {U.shape} {S.shape}')
                 X = U @ S @ U.T
-                np.savez(fname, X=X, U=U, S=S, X0=X0, Qc=Qc, Xrk=Xrk, Xref=Xref, 
-                         Tend=Tend, tau=tau, torder=torder, rk=rk, 
-                         svals=svals, res_rk=res_rk, res_rf=res_rf)
+                #np.savez(fname, X=X, U=U, S=S, X0=X0, Qc=Qc, Xrk=Xrk, Xref=Xref, 
+                #         Tend=Tend, tau=tau, torder=torder, rk=rk, 
+                #         svals=svals, res_rk=res_rk, res_rf=res_rf)
             else:
                 data = np.load(fname)
                 X = data['X']
                 res_rk = data['res_rk']
                 res_rf = data['res_rf']  
                 etime = tm()
-            print(f' dt={tau:.0e}:  etime = {tm()-etime:5.2f}   rel error: {rn(X,Xrk):.4e}')
+            print(f' dt={tau:.0e}: time= {tm()-etime:5.2f}  res_RK: {rn(X,Xrk):.2e}, res_BS: {rn(X,Xref):.2e}, res: {CALE(X,L,Qc):.2e}')
             if torder == 1:
                 axs[i,0].semilogy(np.linspace(0,Tend,len(res_rk)), res_rk, label=f'dt={tau:.2e}',marker='o')
                 axs[i,1].semilogy(np.linspace(0,Tend,len(res_rf)), res_rf, label=f'dt={tau:.2e}',marker='o')
@@ -237,7 +235,7 @@ for it, torder in enumerate(TOv):
             erk[it, i, j] = res_rk[-1]
             erf[it, i, j] = res_rf[-1]
             nrm[it, i, j] = np.linalg.norm(X)
-        print('')
+        #print('')
 
 for i, rk in enumerate(rkv):
     for ax in axs[i,:]:
@@ -249,6 +247,21 @@ axs[0,0].set_title(f'error vs. RK45\nrk = {rkv[0]:02d}')
 axs[0,1].set_title(f'error vs. BS\nrk = {rkv[0]:02d}')
 plt.xlabel('dt')
 plt.legend()   
+
+'''
+fig, ax = plt.subplots(1,2)
+ax[0].plot(np.linspace(0, Trk*Nrep+1, len(nrmX)), nrmX)
+ax[1].semilogy(np.linspace(0, Trk*Nrep+1, len(nrmX)), erel[0,:])
+'''
+sys.exit()
+fig1, ax1 = plt.subplots(1,2)
+p = ax1[0].contourf(px, py, Xref, 100)
+fig1.colorbar(p, ax = ax1[0])
+ax1[0].set_title('Controllability')
+
+p = ax1[1].contourf(px, py, Yref, 100)
+fig1.colorbar(p, ax = ax1[1])
+ax1[1].set_title('Observability')
 
 fig2, ax2 = plt.subplots(1,1)
 for i, rk in enumerate(rkv):

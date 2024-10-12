@@ -13,6 +13,9 @@ from solvers.arnoldi import kryl_expm
 
 from core.utils import en, pmat, pvec
 
+def CALE(X,A,Q):
+    return np.linalg.norm(A @ X + X @ A.T + Q)/X.shape[0]
+
 def check_shifts(p_v):
     
     status = 0
@@ -230,6 +233,7 @@ def M_ForwardMap(A,U,S,tau,exptA=None,nkryl=None):
             U1 = kryl_expm(A,U,nkryl,tau)
     else:
         U1     = exptA @ U
+    
     UA, R, p = qr(U1, mode='economic', pivoting = True)
     R = R[:,np.argsort(p)]
     SA    = R @ S @ R.T
@@ -279,7 +283,7 @@ def G_ForwardMap(UA, SA, Q, tau):
     
     # update S
     S1  = L1 @ U1
-   
+    
     return U1, S1
 
 def idx_first_below(vals, tol):
