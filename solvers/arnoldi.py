@@ -181,4 +181,7 @@ def kryl_expm(A,B,nkryl,dt=1.0,rho=None):
     y    = expH[:kpp,:rk] @ Rb
     x    = Q_ @ y
     
+    #err = np.linalg.norm(abs(expH[kp:kpp,:rk] @ Rb))
+    #print(err)
+    
     return  x
