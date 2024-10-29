@@ -56,9 +56,7 @@ DM1f,DM1b,DM2c = FDmat(xc)
 
 # integration weights
 dx = np.diff(xc)
-wc = np.zeros(Nxc+2)
-#wc[:Nxc+1] += dx
-#wc[1:]     += dx
+wc = np.ones(Nxc+2)*dx[0]
 
 # linear operator
 Lc = np.asarray(np.diag(mu) - nu*DM1f + gamma*DM2c)
