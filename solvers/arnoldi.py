@@ -131,6 +131,86 @@ def DCGS(Q,w,k):
     proj = proj[1:k]
     return proj,beta,z
 
+def qr(A, tol=1e-14):
+    Q = A.copy()
+    n, m = A.shape
+    R = np.zeros((m,m))
+    for j in range(m):
+        if j > 0:
+            # Double Gram-Schmidt orthogonalization
+            # pass 1
+            p1 = Q[:,:j].T @ Q[:,j]
+            Q[:,j] -= Q[:,:j] @ p1
+            # pass 2
+            p2 = Q[:,:j].T @ Q[:,j]
+            Q[:,j] -= Q[:,:j] @ p2
+            # combine
+            R[:j,j] = p1 + p2
+        # normalize
+        beta = np.sqrt(Q[:,j].T @ Q[:,j])
+        # Check for breakdown.
+        if abs(beta) < tol:
+            R[j, j] = 0.0
+            Q[:,j]  = np.zeros((n,))
+        else:
+            Q[:,j]  = Q[:,j]/beta
+            R[j, j] = beta
+    return Q,R
+
+def qrp(A, tol=1e-14):
+    Q = A.copy()
+    n, m = A.shape
+    R = np.zeros((m,m))
+    Rii = np.array([ Q[:,i].T @ Q[:,i] for i in range(m) ])
+    P = np.arange(m, dtype=int)
+
+    for j in range(m):
+        idx = np.argmax(Rii)
+        if abs(Rii[idx]) < tol:
+            for i in range(j,m):
+                if j > 0:
+                    # Double Gram-Schmidt orthogonalization
+                    # pass 1
+                    Q[:,i] -= ( Q[::,i] @ Q[:,:i].T ) @ Q[:,i]
+                    # pass 2
+                    Q[:,i] -= ( Q[::,i] @ Q[:,:i].T ) @ Q[:,i]
+                # normalize
+                beta = Q[:,i].T @ Q[:,i]
+                Q[:,i]  = Q[:,i]/beta
+            break
+        
+        # switch cols
+        Qtmp  = Q[:,j].copy()
+        Rtmp  = R[:,j].copy()
+        itmp  = P[j]
+        iitmp = Rii[j]
+        Q[:,j] = Q[:,idx]
+        R[:,j] = R[:,idx]
+        P[j]   = P[idx]
+        Rii[j] = Rii[idx]
+        Q[:,idx] = Qtmp
+        R[:,idx] = Rtmp
+        P[idx]   = itmp
+        Rii[idx] = iitmp
+        # normalize
+        beta = np.sqrt(Q[:,j].T @ Q[:,j])
+        if abs(beta) < tol:
+            R[j, j] = 0.0
+            Q[:,j]  = 0.0
+        else:
+            Q[:,j]  = Q[:,j]/beta
+            R[j, j] = beta
+        # orthogonalize rest of vectors against new vector
+        for i in range(j+1,m):
+            p1 = Q[:,i].T @ Q[:,j]
+            Q[:,i] -= Q[:,j]*p1
+            R[j,i]  = p1
+        # update Rii
+        Rii[j] = 0.0
+        for i in range(j+1,m):
+            Rii[i] = Rii[i] - R[j,i]**2
+    return Q, R, P
+
 def kryl_expm(A,B,nkryl,dt=1.0,rho=None):
     """
     Efficient computation of the action of the exponential propagator of A 
@@ -180,5 +260,8 @@ def kryl_expm(A,B,nkryl,dt=1.0,rho=None):
     
     y    = expH[:kpp,:rk] @ Rb
     x    = Q_ @ y
+    
+    #err = np.linalg.norm(abs(expH[kp:kpp,:rk] @ Rb))
+    #print(err)
     
     return  x

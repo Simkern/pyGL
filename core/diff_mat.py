@@ -20,12 +20,17 @@ def FDmat(x):
 
 # first derivative (second order upwind)
 def DM1(Nx):
-    D1f = sp.diags([-3, 4, -1],[0, 1, 2], shape = (Nx,Nx))
+    # second order central (LightKrylov)
+    D1f  = sp.diags([1, -1],[1, -1], shape = (Nx,Nx))
+    D1b  = sp.diags([1, -1],[-1, 1], shape = (Nx,Nx))
+    
+    # first derivative (second order upwind)
+    #D1f = sp.diags([-3, 4, -1],[0, 1, 2], shape = (Nx,Nx))
+    #D1b = sp.diags([1, -4, 3],[-2, -1, 0], shape = (Nx,Nx))
+    
+    # (first order upwind)
     #D1f = sp.diags([-1, 1],[0, 1], shape = (Nx,Nx))
-    #D1f = sp.lil_matrix(D1f)
-    D1b = sp.diags([1, -4, 3],[-2, -1, 0], shape = (Nx,Nx))
     #D1b = sp.diags([-1, 1],[-1, 0], shape = (Nx,Nx))
-    #D1b = sp.lil_matrix(D1b)
     return D1f,D1b
 
 # second derivative (second order)
