@@ -25,18 +25,21 @@ def en(a):
     """
     return np.sqrt(enorm(a))
 
-def p(x, name=' '):
+def p(x, name=' ', f='E'):
     try:
         d2 = x.shape[1]
-        pmat(x, name)
+        pmat(x, name, f)
     except:
         pvec(x, name)
 
-def pmat(a, name=' '):
+def pmat(a, name=' ', f='E'):
     print(f'\npmat: {name}')
     for row in a:
         for col in row:
-            print("{:8.3f}".format(col), end=" ")
+            if f=='E':
+                print("{:10.3e}".format(col), end=" ")
+            else:
+                print("{:8.5f}".format(col), end=" ")
         print("")
 
 def pvec(v, name=' '):
