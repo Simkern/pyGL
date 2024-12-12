@@ -6,6 +6,8 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
+sys.path.append('../.')
+
 from core.CGL_parameters import CGL, CGL2
 from core.diff_mat import FDmat
 
@@ -105,7 +107,7 @@ dot = np.array([[x_b, x_c]])
 # compute controllability gramian
 
 # direct
-Qc = B @ B. T @ W
+Qc = B @ B.T @ W
 X = linalg.solve_continuous_lyapunov(L, -Qc)
 
 Qo = C.T @ C @ W
@@ -114,28 +116,30 @@ Y = linalg.solve_continuous_lyapunov(L.T, -Qo)
 fig1, ax1 = plt.subplots(1,1)
 p = ax1.contourf(px, py, Qc, 100)
 #fig1.colorbar(p, ax = ax1)
-#ax1.set_title('B @ B.T')
+ax1.set_title('B @ B.T', fontsize=14)
 
 fig2, ax2 = plt.subplots(1,1)
 p = ax2.contourf(px, py, Qo, 100)
 #fig2.colorbar(p, ax = ax2)
-#ax2.set_title('C.T @ C')
+ax2.set_title('C.T @ C', fontsize=14)
 
 fig3, ax3 = plt.subplots(1,1)
 p = ax3.contourf(px, py, X, 100, cmap='RdBu_r')
 #fig3.colorbar(p, ax = ax3)
-#ax3.set_title('Controllability Gramian')
+ax3.set_title('Controllability Gramian', fontsize=14)
 
 fig4, ax4 = plt.subplots(1,1)
 p = ax4.contourf(px, py, Y, 100, cmap='RdBu_r')
 #fig4.colorbar(p, ax = ax4)
-#ax4.set_title('Observability Gramian')
+ax4.set_title('Observability Gramian', fontsize=14)
 
 fig5, ax5 = plt.subplots(1,1)
 ax5.scatter(range(1,Nx+1), linalg.svd(X, compute_uv=False), 50, 'k', marker='+', label='exact')
+ax5.set_title('Controllability Gramian', fontsize=14)
 
 fig6, ax6 = plt.subplots(1,1)
 ax6.scatter(range(1,Nx+1), linalg.svd(Y, compute_uv=False), 50, 'k', marker='+', label='exact')
+ax6.set_title('Observability Gramian', fontsize=14)
 
 for ax in [ax5, ax6]:
     ax.set_yscale('log')
@@ -166,7 +170,6 @@ ax4.scatter(x_c, x_c, 80, 'b', edgecolors='k', linewidths=2)
 if make_real:
     ax3.scatter(x_b + L0, x_b + L0, 80, 'r', edgecolors='k', linewidths=2)
     ax4.scatter(x_c + L0, x_c + L0, 80, 'b', edgecolors='k', linewidths=2)
-    
 
 if if_save:
     names = ['BBT',
@@ -181,3 +184,5 @@ if if_save:
     for fig, name in zip([fig1, fig2, fig3, fig4, fig5, fig6], names):
         fig.savefig(os.path.join('pics_png',name+'.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.05)
         fig.savefig(os.path.join('pics_eps',name+'.eps'), format='eps', dpi=300, bbox_inches='tight', pad_inches=0.05)
+else:
+    plt.show()

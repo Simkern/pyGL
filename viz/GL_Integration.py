@@ -7,6 +7,8 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
+sys.path.append('../.')
+
 from core.CGL_parameters import CGL, CGL2
 from core.diff_mat import FDmat
 from core.utils import enorm
@@ -24,7 +26,7 @@ plt.rcParams.update(params)
 plt.close("all")
 
 make_real = False
-if_save = True
+if_save = False
 
 # Parameters
 L = 50
@@ -213,3 +215,5 @@ if if_save:
     for fig, name in zip([fig1, fig2, fig3, fig4, fig5, fig6], names):
         fig.savefig(os.path.join('pics_png',name+'.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.05)
         fig.savefig(os.path.join('pics_eps',name+'.eps'), format='eps', dpi=300, bbox_inches='tight', pad_inches=0.05)
+else:
+    plt.show()
