@@ -94,6 +94,7 @@ else:
 
 # weight matrix for convenience
 W = np.diag(w)
+Winv = np.diag(1.0/w)
 
 # Input & output
 B = np.zeros((Nx, rkb))
@@ -112,7 +113,7 @@ dot = np.array([[x_b, x_c]])
 Qc = B @ B.T @ W
 X = linalg.solve_continuous_lyapunov(L, -Qc)
 
-Qo = C.T @ C @ W
+Qo = C.T @ C @ Winv
 Y = linalg.solve_continuous_lyapunov(L.T, -Qo)
 
 r = 100

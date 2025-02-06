@@ -109,7 +109,7 @@ else:
     prx, pry = np.meshgrid(x, x)
 
 # weight matrix for convenience
-W = np.diag(w)
+Winv = np.diag(1.0/w)
 
 # plotting preparation
 box = x12*np.array([[1,1,-1,-1,1],[1,-1,-1,1,1]])
@@ -121,7 +121,7 @@ dot = np.array([[x_b, x_c]])
 Qc = B @ B.T @ W
 Xref = linalg.solve_continuous_lyapunov(L, -Qc)
 
-Qo = C.T @ C @ W
+Qo = C.T @ C @ Winv
 Yref = linalg.solve_continuous_lyapunov(L.T, -Qo)
 
 nQ    = np.linalg.norm(Qc)
