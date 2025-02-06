@@ -8,6 +8,8 @@ from scipy import linalg
 from scipy.integrate import solve_ivp
 from matplotlib import pyplot as plt
 
+sys.path.append('../.')
+
 from core.CGL_parameters import CGL, CGL2
 from core.diff_mat import FDmat
 from solvers.lyapunov_ProjectorSplittingIntegrator import LR_OSI_test
