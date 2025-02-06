@@ -130,7 +130,7 @@ fname = os.path.join(fldr,filename)
 if not os.path.isfile(fname):
     s0    = np.random.random_sample((rk_X0,))
     U0, _ = linalg.qr(np.random.random_sample((Nx, rk_X0)),mode='economic')
-    S0    = np.diag(sorted(s0)[::-1]);
+    S0    = np.diag(sorted(s0)[::-1])
     X0    = U0 @ S0 @ U0.T
     np.savez(fname, X0=X0, S0=S0, U0=U0)
 else:
